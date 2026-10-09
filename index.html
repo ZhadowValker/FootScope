@@ -87,6 +87,18 @@ img.snap{width:100%;max-height:420px;object-fit:contain;background:#0f172a;borde
 .obs li{margin:4px 0}
 .grid-btn{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .disc{font-size:12px;color:var(--mute);border-top:1px dashed var(--line);margin-top:14px;padding-top:10px}
+.mk-row{display:flex;gap:10px;align-items:center}
+.mk-row svg{width:132px;height:auto;flex:none}
+#mk-ins{font-size:15px}
+.mk-stage{position:relative;margin:10px 0;touch-action:none;-webkit-user-select:none;user-select:none}
+#mk-cv{width:100%;height:auto;display:block;border-radius:12px;background:#000;touch-action:none}
+#mk-loupe{position:absolute;width:112px;height:112px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 14px #0009;display:none;pointer-events:none;background:#000}
+.fpi table{width:100%;border-collapse:collapse;font-size:14px}
+.fpi th,.fpi td{padding:7px 4px;border-top:1px solid var(--line);text-align:left;vertical-align:middle}
+.fpi th{font-size:12px;color:var(--mute);border-top:0}
+.fpi select{padding:6px;font-size:14px;width:72px}
+.fpi small{display:block;color:var(--mute);font-size:11px}
+details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
 @media print{
  body{background:#fff}.noprint,#toast,#loader{display:none!important}
  .screen{display:none!important}#results{display:block!important}
@@ -186,6 +198,37 @@ img.snap{width:100%;max-height:420px;object-fit:contain;background:#0f172a;borde
   <div class="card"><h3>Quick readings</h3><div id="rv-rows"></div></div>
   <button class="btn" id="btn-next"></button>
   <button class="btn sec" id="btn-retake">Retake this view</button>
+  <button class="btn ghost" id="btn-skipfoot" style="display:none">Skip foot close-ups → results</button>
+ </div>
+</section>
+
+<!-- FOOT BRIEF -->
+<section id="fbrief" class="screen">
+ <div class="wrap">
+  <div class="steps" id="fb-steps"></div>
+  <h2 id="fb-title"></h2>
+  <div class="card diagram" id="fb-diagram"></div>
+  <div class="card"><h3>How to take the photo</h3><ol class="instr" id="fb-list"></ol></div>
+  <button class="btn" id="fb-cam">📷 Take photo</button>
+  <button class="btn sec" id="fb-gal">Choose from gallery</button>
+  <button class="btn ghost" id="fb-skip">Skip this photo</button>
+  <button class="btn ghost" id="fb-back">← Back</button>
+  <input type="file" id="f-cam" accept="image/*" capture="environment" hidden>
+  <input type="file" id="f-gal" accept="image/*" hidden>
+ </div>
+</section>
+
+<!-- MARK -->
+<section id="mark" class="screen">
+ <div class="wrap">
+  <div class="small mute" id="mk-prog"></div>
+  <h2 id="mk-title" style="margin-top:2px"></h2>
+  <div class="card" style="padding:10px"><div class="mk-row"><div id="mk-guide"></div><div id="mk-ins"></div></div></div>
+  <div class="mk-stage"><canvas id="mk-cv"></canvas><canvas id="mk-loupe" width="224" height="224"></canvas></div>
+  <p class="small mute" style="margin:4px 0 8px">Tap the photo to place each point. Keep your finger down to see the magnifier and slide to the exact spot. Drag any point to adjust it.</p>
+  <div class="grid-btn"><button class="btn sec" id="mk-undo">Undo point</button><button class="btn sec" id="mk-reset">Clear all</button></div>
+  <button class="btn" id="mk-done" disabled>Save measurements</button>
+  <button class="btn ghost" id="mk-retake">← Retake / change photo</button>
  </div>
 </section>
 
@@ -196,6 +239,8 @@ img.snap{width:100%;max-height:420px;object-fit:contain;background:#0f172a;borde
   <div class="card" id="r-pat"></div>
   <div class="card" id="r-obs"></div>
   <div id="r-views"></div>
+  <div id="r-foot"></div>
+  <div id="r-fpi"></div>
   <p class="disc">Screening aid based on 2-D video pose estimation (MediaPipe). Not a diagnosis. Reference ranges are approximate; confirm findings with clinical examination and, where needed, imaging or gait-lab assessment.</p>
   <div class="noprint">
    <button class="btn" id="btn-print">Save / print PDF report</button>
@@ -485,6 +530,74 @@ function analyzeFrames(key, frames, meta, H) {
   out.gaitRows = gaitRows(key, walk, meta, H);
   return out;
 }
+/* ---------- foot close-ups (points are normalised 0..1 on the photo) ---------- */
+const crossv = (a, b) => a[0] * b[1] - a[1] * b[0];
+function footRear(pts, w, h) {
+  const P = i => [pts[i].x * w, pts[i].y * h], rows = [], vals = {};
+  for (const [s, o] of [['L', 0], ['R', 3]]) {
+    if (!pts[o + 2]) continue;
+    const up = norm(sub(P(o), P(o + 2))), uLeft = [up[1], -up[0]];       // photo taken from behind
+    const v = frontalDev(P(o), P(o + 1), P(o + 2), s === 'L' ? uLeft : [-uLeft[0], -uLeft[1]]);
+    vals[s] = v;
+    const r = hindRow(`${s === 'L' ? 'Left' : 'Right'} heel angle (close-up)`, v);
+    r.ref = 'Normal ≈ −2° to 6° valgus · Achilles line vs heel line';
+    rows.push(r);
+  }
+  return { rows, vals };
+}
+function footMedial(pts, w, h, s) {
+  if (pts.length < 5) return { rows: [], vals: {} };
+  const P = i => [pts[i].x * w, pts[i].y * h];
+  const heel = P(0), toe = P(1), mal = P(2), nav = P(3), mt = P(4);
+  const mlaa = angleBetween(sub(mal, nav), sub(mt, nav));
+  const FL = len(sub(toe, heel)) || 1, NH = Math.abs(crossv(norm(sub(toe, heel)), sub(nav, heel)));
+  const ratio = NH / FL, name = s === 'L' ? 'Left' : 'Right';
+  const mtxt = mlaa > 150 ? 'low arch tendency' : mlaa < 130 ? 'high arch tendency' : 'normal arch';
+  return { vals: { mlaa, ratio }, rows: [
+    row(`${name} medial arch angle (MLAA)`, `${mlaa.toFixed(0)}° · ${mtxt}`, 'Normal ≈ 130–150° · higher = flatter, lower = higher arch · approximate',
+      (mlaa >= 130 && mlaa <= 150) ? 'ok' : (mlaa >= 120 && mlaa < 160) ? 'warn' : 'bad'),
+    row(`${name} navicular height ÷ foot length`, ratio.toFixed(2), 'Typical ≈ 0.13–0.20 · lower = flatter · approximate',
+      (ratio >= 0.13 && ratio <= 0.20) ? 'ok' : (ratio >= 0.10 && ratio <= 0.23) ? 'warn' : 'bad')] };
+}
+function footTop(pts, w, h) {
+  const P = i => [pts[i].x * w, pts[i].y * h], rows = [], vals = {}, vec = {};
+  for (const [s, o] of [['L', 0], ['R', 5]]) {
+    if (!pts[o + 4]) continue;
+    const v = norm(sub(P(o + 1), P(o))); vec[s] = v;
+    const uL = [v[1], -v[0]], lat = s === 'L' ? uL : [-uL[0], -uL[1]];   // person's left when viewed from above
+    const hva = frontalDev(P(o + 2), P(o + 3), P(o + 4), lat), name = s === 'L' ? 'Left' : 'Right';
+    vals[s] = { hva };
+    const cls = hva < 15 ? 'normal' : hva < 20 ? 'mild' : hva <= 40 ? 'moderate' : 'severe';
+    rows.push(row(`${name} big-toe angle (hallux valgus)`, hva < -3 ? `${f1(-hva)}° hallux varus` : `${f1(Math.max(hva, 0))}° · ${cls}`,
+      'Normal < 15° · mild 15–20° · moderate 20–40° · severe > 40° · photo estimate (X-ray is the standard)',
+      hva < -3 ? 'warn' : hva < 15 ? 'ok' : hva <= 40 ? 'warn' : 'bad'));
+  }
+  if (vec.L && vec.R) {
+    const hv = sub(P(5), P(0)); let f = [hv[1], -hv[0]];
+    if (dot(f, [vec.L[0] + vec.R[0], vec.L[1] + vec.R[1]]) < 0) f = [-f[0], -f[1]];
+    f = norm(f); const uLf = [f[1], -f[0]];
+    for (const s of ['L', 'R']) {
+      let a = Math.atan2(dot(vec[s], uLf), dot(vec[s], f)) / rad; if (s === 'R') a = -a;
+      vals[s].toeout = a;
+      rows.push(row(`${s === 'L' ? 'Left' : 'Right'} foot angle (toe-out / toe-in)`, `${f1(Math.abs(a))}° ${a >= 0 ? 'toe-out' : 'toe-in'}`,
+        'Typical 0–15° toe-out, relative to the direction the patient faces',
+        (a >= -3 && a <= 15) ? 'ok' : ((a >= -8 && a < -3) || (a > 15 && a <= 25)) ? 'warn' : 'bad'));
+    }
+  }
+  return { rows, vals };
+}
+/* Foot Posture Index (FPI-6): six items scored −2…+2, total −12…+12 */
+const FPI_ITEMS = [
+  ['Talar head palpation', '−2 palpable on the lateral side only · 0 equal on both sides · +2 palpable on the medial side only'],
+  ['Curves above / below the lateral malleolus', '−2 curve below is straight or convex · 0 both curves equal · +2 curve below is much more concave'],
+  ['Heel position (frontal plane)', '−2 > 5° inverted · −1 0–5° inverted · 0 vertical · +1 0–5° everted · +2 > 5° everted'],
+  ['Bulge at the talonavicular joint', '−2 markedly concave · 0 flat · +2 markedly bulging'],
+  ['Medial arch congruence', '−2 very high and acute behind the mid-point · 0 normal, even curve · +2 very low, arch touching the floor'],
+  ['Forefoot on rearfoot (“too many toes”)', '−2 only medial toes visible from behind · 0 equal medial and lateral toes · +2 only lateral toes visible']
+];
+const fpiFromHeel = v => v == null ? null : v <= -5 ? -2 : v < -1 ? -1 : v <= 1 ? 0 : v < 5 ? 1 : 2;
+const fpiFromMlaa = m => m == null ? null : m < 120 ? -2 : m < 130 ? -1 : m <= 150 ? 0 : m <= 160 ? 1 : 2;
+const fpiClass = t => t >= 10 ? ['Highly pronated', 'bad'] : t >= 6 ? ['Pronated', 'warn'] : t >= 0 ? ['Normal', 'ok'] : t >= -4 ? ['Supinated', 'warn'] : ['Highly supinated', 'bad'];
 // </analysis>
 
 /* =====================================================================
@@ -521,7 +634,7 @@ const VIEWS = [
       '<b>When you hear “Walk”</b>, walk straight away from the phone at a natural pace.'] }
 ];
 
-const S = { patient: {}, idx: 0, delay: 5, voice: true, facing: 'environment', data: {}, liveAng: true };
+const S = { patient: {}, idx: 0, delay: 5, voice: true, facing: 'environment', data: {}, liveAng: true, foot: {}, fpi: { L: Array(6).fill(null), R: Array(6).fill(null) } };
 let pose = null, poseErr = 0, poseP = null;
 let stream = null, camOn = false, wake = null, lastTs = 0, lastStatusT = 0;
 let rec = newRec();
@@ -596,7 +709,7 @@ $('#btn-start').onclick = async () => {
     $('#loader').style.display = 'none';
     if (!pose) toast('Analysis engine could not load (check internet). You can still record, but no measurements will be calculated.', 7000);
   }
-  S.idx = 0; S.data = {};
+  S.idx = 0; S.data = {}; S.foot = {}; S.fpi = { L: Array(6).fill(null), R: Array(6).fill(null) };
   renderBrief(); show('brief');
 };
 
@@ -922,11 +1035,13 @@ function renderReview() {
   const cov = Math.round(d.coverage * 100), cls = cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad';
   $('#rv-cov').innerHTML = `Body detected in <span class="chip ${cls}">${cov}% of frames</span> ${cov < 60 ? ' — poor detection, please retake with better light and the whole body in view.' : cov < 85 ? ' — acceptable; retake if results look odd.' : ' — good.'}`;
   $('#rv-rows').innerHTML = d.res.staticRows.slice(0, 4).map(rowHtml).join('') || '<p class="mute">No readings</p>';
-  $('#btn-next').textContent = S.idx < 2 ? `Next: ${VIEWS[S.idx + 1].name} →` : 'See results';
+  $('#btn-next').textContent = S.idx < 2 ? `Next: ${VIEWS[S.idx + 1].name} →` : 'Next: foot close-ups →';
+  $('#btn-skipfoot').style.display = S.idx === 2 ? '' : 'none';
   show('review');
 }
 $('#btn-retake').onclick = () => { const k = VIEWS[S.idx].key; if (S.data[k] && S.data[k].url) URL.revokeObjectURL(S.data[k].url); delete S.data[k]; renderBrief(); show('brief'); };
-$('#btn-next').onclick = () => { $('#rv-video').pause(); if (S.idx < 2) { S.idx++; renderBrief(); show('brief'); } else renderResults(); };
+$('#btn-next').onclick = () => { $('#rv-video').pause(); if (S.idx < 2) { S.idx++; renderBrief(); show('brief'); } else startFoot(); };
+$('#btn-skipfoot').onclick = () => { $('#rv-video').pause(); renderResults(); };
 
 /* ---------- results ---------- */
 function rowHtml(r) {
@@ -971,24 +1086,277 @@ function annotate(key) {
 function renderResults() {
   const p = S.patient, now = new Date();
   $('#r-pat').innerHTML = `<h2 style="margin-top:0">${esc(p.name || 'Unnamed patient')}</h2><div class="small mute">${p.age ? 'Age ' + esc(p.age) + ' · ' : ''}${p.height ? 'Height ' + esc(p.height) + ' cm (' + Math.floor(p.height / 2.54 / 12) + ' ft ' + ((p.height / 2.54) % 12).toFixed(1) + ' in) · ' : ''}${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
-  const flagged = [];
   let html = '';
   VIEWS.forEach(v => {
     const d = S.data[v.key]; if (!d) return;
-    const img = annotate(v.key), all = d.res.staticRows.concat(d.res.gaitRows);
-    all.filter(r => r.status === 'warn' || r.status === 'bad').forEach(r => flagged.push({ view: v.short, ...r }));
-    const cov = Math.round(d.coverage * 100);
+    const img = annotate(v.key), cov = Math.round(d.coverage * 100);
     html += `<div class="card"><h2 style="margin-top:0">${v.name} <span class="chip ${cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad'}" style="vertical-align:middle">${cov}% detected</span></h2>
       ${img ? `<img class="snap" src="${img}" alt="${v.name} annotated frame">` : ''}
       <h3 style="margin-top:14px">Standing posture</h3>${d.res.staticRows.map(rowHtml).join('')}
       <h3 style="margin-top:14px">Walking</h3>${d.res.gaitRows.map(rowHtml).join('') || '<p class="mute">—</p>'}</div>`;
   });
   $('#r-views').innerHTML = html;
+  lastFoot = footResults();
+  initFpiAuto();
+  $('#r-foot').innerHTML = lastFoot.map(f => `<div class="card"><h2 style="margin-top:0">Foot · ${esc(f.task.title)}</h2><img class="snap" src="${f.url}" alt="${esc(f.task.title)} with marked points"><div style="margin-top:10px">${f.rows.map(rowHtml).join('') || '<p class="mute">No measurements</p>'}</div></div>`).join('');
+  $('#r-fpi').innerHTML = fpiCardHtml();
+  wireFpi(); renderObs();
+  show('results');
+}
+
+/* =====================================================================
+   Foot close-ups
+   ===================================================================== */
+// <footdraw>
+const GCOL = { L: '#22d3ee', R: '#fb923c' };
+function footGroups(task) { let o = 0; return task.groups.map(gr => { const r = { ...gr, o }; o += gr.hints.length; return r; }); }
+function computeFootTask(id, pts, w, h) {
+  if (id === 'rear') return footRear(pts, w, h);
+  if (id === 'medL') return footMedial(pts, w, h, 'L');
+  if (id === 'medR') return footMedial(pts, w, h, 'R');
+  if (id === 'top') return footTop(pts, w, h);
+  return { rows: [], vals: {} };
+}
+function tagImg(g, text, x, y, col, k) {
+  g.font = `700 ${13 * k}px system-ui,sans-serif`;
+  const w = g.measureText(text).width + 12 * k, hh = 21 * k;
+  g.fillStyle = 'rgba(15,23,42,.8)'; g.beginPath();
+  if (g.roundRect) g.roundRect(x - w / 2, y - hh / 2, w, hh, 7 * k); else g.rect(x - w / 2, y - hh / 2, w, hh);
+  g.fill(); g.fillStyle = col; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y + k);
+}
+function renderFoot(cv, task, img, pts, k, active) {
+  if (cv.width !== img.width) cv.width = img.width;
+  if (cv.height !== img.height) cv.height = img.height;
+  const g = cv.getContext('2d'), W = cv.width, Hh = cv.height;
+  g.clearRect(0, 0, W, Hh); g.drawImage(img, 0, 0);
+  const P = i => [pts[i].x * W, pts[i].y * Hh];
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const res = computeFootTask(task.id, pts, W, Hh), groups = footGroups(task);
+  for (const gr of groups) {
+    const col = GCOL[gr.key], has = n => !!pts[gr.o + n];
+    const seg = (a, b, dash) => {
+      if (!has(a) || !has(b)) return;
+      g.setLineDash(dash ? [10 * k, 8 * k] : []); g.strokeStyle = col; g.lineWidth = 3 * k;
+      g.beginPath(); g.moveTo(...P(gr.o + a)); g.lineTo(...P(gr.o + b)); g.stroke(); g.setLineDash([]);
+    };
+    if (task.id === 'rear') { seg(0, 1); seg(1, 2); } else { seg(0, 1, true); seg(2, 3); seg(3, 4); }
+  }
+  for (const gr of groups) {
+    const col = GCOL[gr.key], v = res.vals[gr.key];
+    if (task.id === 'rear' && typeof v === 'number' && pts[gr.o + 1]) {
+      const [x, y] = P(gr.o + 1);
+      tagImg(g, `${gr.key} ${Math.abs(v).toFixed(1)}° ${v >= 0 ? 'valg' : 'varus'}`, x + (gr.key === 'L' ? -1 : 1) * 62 * k, y, col, k);
+    }
+    if (task.id.startsWith('med') && res.vals.mlaa != null && pts[gr.o + 3]) {
+      const [x, y] = P(gr.o + 3);
+      tagImg(g, `MLAA ${res.vals.mlaa.toFixed(0)}°`, x, y + 34 * k, col, k);
+      tagImg(g, `NH ${res.vals.ratio.toFixed(2)}`, x, y + 60 * k, col, k);
+    }
+    if (task.id === 'top' && v && v.hva != null && pts[gr.o + 3]) {
+      const [x, y] = P(gr.o + 3), side = gr.key === 'L' ? 1 : -1;
+      tagImg(g, `HVA ${v.hva.toFixed(0)}°`, x + side * 52 * k, y, col, k);
+      if (v.toeout != null) { const [tx, ty] = P(gr.o + 1); tagImg(g, `${Math.abs(v.toeout).toFixed(0)}° ${v.toeout >= 0 ? 'out' : 'in'}`, tx, ty - 26 * k, col, k); }
+    }
+  }
+  pts.forEach((p, i) => {
+    const gr = groups.find(q => i >= q.o && i < q.o + q.hints.length), col = gr ? GCOL[gr.key] : '#fff', n = i - (gr ? gr.o : 0) + 1;
+    const x = p.x * W, y = p.y * Hh;
+    g.fillStyle = col; g.strokeStyle = '#fff'; g.lineWidth = 2 * k; g.beginPath(); g.arc(x, y, (i === active ? 6.5 : 4.5) * k, 0, 7); g.fill(); g.stroke();
+    g.font = `700 ${11 * k}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 3 * k; g.strokeStyle = '#fff'; g.strokeText(String(n), x + 11 * k, y - 11 * k);
+    g.fillStyle = '#0f172a'; g.fillText(String(n), x + 11 * k, y - 11 * k);
+  });
+}
+// </footdraw>
+
+const H_REAR = ['Centre of the Achilles tendon about 10 cm above the heel', 'Centre of the Achilles tendon where it meets the heel (top of the heel)', 'Centre of the heel where it touches the floor'];
+const H_MED = ['Back of the heel — the most rearward point, at floor level', 'Tip of the big toe — the front-most point', 'Inner ankle bone (medial malleolus) — its most prominent point', 'Navicular bump — the bony bump on the inner midfoot, below and in front of the ankle bone', 'Big-toe joint — the bump at the base of the big toe (head of the 1st metatarsal)'];
+const H_TOP = ['Centre of the back of the heel', 'Tip of the 2nd toe (the one next to the big toe)', 'Middle of the inner edge of the foot (half-way between the heel and the big-toe joint)', 'Big-toe joint — centre of the bump at the base of the big toe', 'Tip of the big toe'];
+const medSteps = side => [
+  `<b>Patient stands barefoot</b> with weight on both feet. Step the other foot a little forward so the <b>inner side</b> of the ${side} foot is clear.`,
+  `<b>Phone on the floor, 40–50 cm</b> from the inner side of the ${side} foot, lens at <b>arch height</b> (about 5 cm above the floor), kept level and pointing straight at the foot.`,
+  '<b>The whole foot</b> — back of the heel to the tip of the big toe, plus the ankle bone — must be in the photo.'];
+const FOOT_TASKS = [
+  { id: 'rear', short: 'Heels', title: 'Heels from behind', groups: [{ key: 'L', name: 'LEFT leg', hints: H_REAR }, { key: 'R', name: 'RIGHT leg', hints: H_REAR }],
+    steps: ['<b>Patient stands barefoot</b>, feet about hip-width apart, weight shared evenly, looking straight ahead. Roll trousers above the calves.',
+      '<b>Place the phone upright on the floor</b> about 40–50 cm behind the heels (lean it on a book), lens at <b>ankle height</b>, pointing straight forward — not tilted.',
+      '<b>Both heels and the lower legs</b> must fill the photo. Take the photo, or choose one from the gallery.',
+      '<b>Tip:</b> pen dots on the centre of the Achilles tendon make marking easier.'] },
+  { id: 'medL', short: 'Left foot', title: 'Left foot — inner side', groups: [{ key: 'L', name: 'LEFT foot', hints: H_MED }], steps: medSteps('LEFT') },
+  { id: 'medR', short: 'Right foot', title: 'Right foot — inner side', groups: [{ key: 'R', name: 'RIGHT foot', hints: H_MED }], steps: medSteps('RIGHT') },
+  { id: 'top', short: 'From above', title: 'Both feet from above', groups: [{ key: 'L', name: 'LEFT foot', hints: H_TOP }, { key: 'R', name: 'RIGHT foot', hints: H_TOP }],
+    steps: ['<b>Patient stands barefoot</b>, feet side by side about hip-width apart, weight shared evenly, toes pointing naturally (do not turn the feet).',
+      '<b>Hold the phone flat above the feet</b>, camera pointing straight down from about 60–80 cm, with the toes toward the top of the photo.',
+      '<b>Both feet</b> from heel to toes must be in the photo. A sheet of plain paper under the feet makes the edges clearer.'] }
+];
+
+/* small schematic showing where each point goes */
+function guideSvg(id, gKey, active) {
+  const dotc = (x, y, n, state) => `<circle cx="${x}" cy="${y}" r="${state === 'on' ? 10 : 8}" fill="${state === 'on' ? '#f59e0b' : state === 'dim' ? '#94a3b8' : '#0f766e'}" stroke="#fff" stroke-width="2"/><text x="${x}" y="${y + 4}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${n}</text>`;
+  const skin = 'fill="#fde4d0" stroke="#d6a688" stroke-width="2"';
+  const st = (key, i) => gKey == null ? 'norm' : (key === gKey ? (i === active ? 'on' : 'norm') : 'dim');
+  if (id === 'medL' || id === 'medR') {
+    const Q = [[30, 126], [266, 128], [84, 76], [136, 102], [216, 116]], key = id === 'medL' ? 'L' : 'R';
+    return `<svg viewBox="0 0 300 150"><rect width="300" height="150" rx="10" fill="#f1f5f9"/><line x1="10" y1="132" x2="290" y2="132" stroke="#cbd5e1" stroke-width="2"/><path d="M30 126 C22 112 30 92 52 88 L62 34 L112 34 L116 82 C160 82 210 98 244 110 C268 118 276 128 262 130 L36 130 Z" ${skin}/>${Q.map((q, i) => dotc(q[0], q[1], i + 1, st(key, i))).join('')}</svg>`;
+  }
+  if (id === 'top') {
+    const F = { L: [[95, 176], [92, 30], [113, 112], [116, 64], [106, 24]], R: [[205, 176], [208, 30], [187, 112], [184, 64], [194, 24]] };
+    const body = (cx, tx) => `<ellipse cx="${cx}" cy="104" rx="27" ry="76" ${skin}/><circle cx="${tx}" cy="30" r="10" ${skin}/>`;
+    return `<svg viewBox="0 0 300 200"><rect width="300" height="200" rx="10" fill="#f1f5f9"/>${body(95, 106)}${body(205, 194)}${['L', 'R'].map(k => F[k].map((q, i) => dotc(q[0], q[1], i + 1, st(k, i))).join('')).join('')}<text x="150" y="196" text-anchor="middle" font-size="10" fill="#64748b">toes toward the top of the photo</text></svg>`;
+  }
+  const leg = x => `<path d="M${x - 12} 10 L${x - 9} 120 Q${x - 17} 140 ${x - 14} 152 L${x + 14} 152 Q${x + 17} 140 ${x + 9} 120 L${x + 12} 10 Z" ${skin}/>`;
+  const P = { L: [110, 40, 120, 150], R: [190, 40, 120, 150] };
+  return `<svg viewBox="0 0 300 170"><rect width="300" height="170" rx="10" fill="#f1f5f9"/><line x1="10" y1="156" x2="290" y2="156" stroke="#cbd5e1" stroke-width="2"/>${leg(110)}${leg(190)}${['L', 'R'].map(k => [[P[k][0], 40], [P[k][0], 120], [P[k][0], 150]].map((q, i) => dotc(q[0], q[1], i + 1, st(k, i))).join('')).join('')}<text x="150" y="14" text-anchor="middle" font-size="10" fill="#64748b">seen from behind: patient's left is on the left</text></svg>`;
+}
+
+/* ---------- photo step ---------- */
+let fidx = 0, mk = null;
+function startFoot() { fidx = 0; renderFBrief(); show('fbrief'); }
+function renderFBrief() {
+  const t = FOOT_TASKS[fidx];
+  $('#fb-steps').innerHTML = FOOT_TASKS.map((x, i) => `<div class="${i === fidx ? 'cur' : S.foot[x.id] ? 'done' : ''}">${x.short}</div>`).join('');
+  $('#fb-title').textContent = `Foot photo ${fidx + 1} of ${FOOT_TASKS.length} — ${t.title}`;
+  $('#fb-diagram').innerHTML = guideSvg(t.id, null, -1);
+  $('#fb-list').innerHTML = t.steps.map(x => `<li>${x}</li>`).join('');
+}
+function nextFoot() { fidx++; if (fidx < FOOT_TASKS.length) { renderFBrief(); show('fbrief'); } else renderResults(); }
+$('#fb-cam').onclick = () => $('#f-cam').click();
+$('#fb-gal').onclick = () => $('#f-gal').click();
+$('#fb-skip').onclick = nextFoot;
+$('#fb-back').onclick = () => { if (fidx > 0) { fidx--; renderFBrief(); } else renderReview(); };
+for (const id of ['#f-cam', '#f-gal']) $(id).addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  toast('Opening photo…', 2500);
+  const img = await loadPhoto(file);
+  if (!img) { toast('Could not open that photo. Try another one.'); return; }
+  startMark(img);
+});
+async function loadPhoto(file) {
+  let src;
+  try { src = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+  catch (e) {
+    try { src = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); }); }
+    catch (e2) { return null; }
+  }
+  const sw = src.width, sh = src.height, k = Math.min(1, 1600 / Math.max(sw, sh));
+  const c = document.createElement('canvas'); c.width = Math.round(sw * k); c.height = Math.round(sh * k);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  return c;
+}
+
+/* ---------- landmark marking ---------- */
+function startMark(img) {
+  const task = FOOT_TASKS[fidx];
+  mk = { task, img, pts: [], drag: -1, n: footGroups(task).reduce((a, gr) => a + gr.hints.length, 0) };
+  $('#mk-title').textContent = task.title;
+  show('mark'); mkUpdate();
+}
+function mkNext() {
+  for (const gr of footGroups(mk.task)) if (mk.pts.length < gr.o + gr.hints.length) return { gr, idx: mk.pts.length - gr.o };
+  return null;
+}
+function mkUpdate() {
+  const cv = $('#mk-cv'), nx = mkNext(), r = cv.getBoundingClientRect();
+  renderFoot(cv, mk.task, mk.img, mk.pts, cv.width / (r.width || 360), mk.drag);
+  if (nx) { $('#mk-ins').innerHTML = `<b>${nx.gr.name} · point ${nx.idx + 1} of ${nx.gr.hints.length}</b><br>${esc(nx.gr.hints[nx.idx])}`; $('#mk-guide').innerHTML = guideSvg(mk.task.id, nx.gr.key, nx.idx); }
+  else { $('#mk-ins').innerHTML = '<b>All points placed ✓</b><br>Drag any point to fine-tune, then save.'; $('#mk-guide').innerHTML = guideSvg(mk.task.id, null, -1); }
+  $('#mk-prog').textContent = `Foot photo ${fidx + 1} of ${FOOT_TASKS.length} · ${mk.pts.length}/${mk.n} points`;
+  $('#mk-done').disabled = mk.pts.length < mk.n;
+}
+const clamp01 = v => Math.max(0, Math.min(1, v));
+function mkPos(e) { const r = $('#mk-cv').getBoundingClientRect(); return { x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height), r }; }
+function showLoupe(e) {
+  const cv = $('#mk-cv'), lp = $('#mk-loupe'), box = cv.parentElement.getBoundingClientRect(), r = cv.getBoundingClientRect();
+  const p = mk.pts[mk.drag], win = 44 * (cv.width / r.width), g = lp.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, lp.width, lp.height);
+  g.drawImage(mk.img, p.x * cv.width - win / 2, p.y * cv.height - win / 2, win, win, 0, 0, lp.width, lp.height);
+  g.strokeStyle = '#f59e0b'; g.lineWidth = 2; g.beginPath();
+  g.moveTo(lp.width / 2, 0); g.lineTo(lp.width / 2, lp.height / 2 - 14); g.moveTo(lp.width / 2, lp.height / 2 + 14); g.lineTo(lp.width / 2, lp.height);
+  g.moveTo(0, lp.height / 2); g.lineTo(lp.width / 2 - 14, lp.height / 2); g.moveTo(lp.width / 2 + 14, lp.height / 2); g.lineTo(lp.width, lp.height / 2); g.stroke();
+  let top = e.clientY - box.top - 56 - 84; if (top < 0) top = e.clientY - box.top - 56 + 84;
+  lp.style.left = Math.max(0, Math.min(box.width - 112, e.clientX - box.left - 56)) + 'px'; lp.style.top = top + 'px'; lp.style.display = 'block';
+}
+const mkCv = $('#mk-cv');
+mkCv.addEventListener('pointerdown', e => {
+  if (!mk) return; e.preventDefault();
+  const q = mkPos(e); let hit = -1, best = 30;
+  mk.pts.forEach((p, i) => { const d = Math.hypot((p.x - q.x) * q.r.width, (p.y - q.y) * q.r.height); if (d < best) { best = d; hit = i; } });
+  if (hit < 0) { if (mk.pts.length >= mk.n) return; mk.pts.push({ x: q.x, y: q.y }); hit = mk.pts.length - 1; }
+  mk.drag = hit; try { mkCv.setPointerCapture(e.pointerId); } catch (err) {}
+  mkUpdate(); showLoupe(e);
+});
+mkCv.addEventListener('pointermove', e => {
+  if (!mk || mk.drag < 0) return; e.preventDefault();
+  const q = mkPos(e); mk.pts[mk.drag] = { x: q.x, y: q.y }; mkUpdate(); showLoupe(e);
+});
+const mkEnd = () => { if (!mk) return; mk.drag = -1; $('#mk-loupe').style.display = 'none'; mkUpdate(); };
+mkCv.addEventListener('pointerup', mkEnd); mkCv.addEventListener('pointercancel', mkEnd);
+$('#mk-undo').onclick = () => { if (mk && mk.pts.length) { mk.pts.pop(); mkUpdate(); } };
+$('#mk-reset').onclick = () => { if (mk) { mk.pts = []; mkUpdate(); } };
+$('#mk-done').onclick = () => { S.foot[mk.task.id] = { img: mk.img, pts: mk.pts.map(p => ({ ...p })) }; mk = null; nextFoot(); };
+$('#mk-retake').onclick = () => { mk = null; renderFBrief(); show('fbrief'); };
+
+/* ---------- foot results + FPI ---------- */
+let lastFoot = [];
+function footResults() {
+  const out = [];
+  for (const t of FOOT_TASKS) {
+    const f = S.foot[t.id]; if (!f) continue;
+    const r = computeFootTask(t.id, f.pts, f.img.width, f.img.height), c = document.createElement('canvas');
+    renderFoot(c, t, f.img, f.pts, Math.max(1, f.img.width / 360), -1);
+    out.push({ task: t, url: c.toDataURL('image/jpeg', .85), rows: r.rows, vals: r.vals });
+  }
+  return out;
+}
+function initFpiAuto() {
+  S.fpiAuto = { L: Array(6).fill(null), R: Array(6).fill(null) };
+  for (const f of lastFoot) {
+    if (f.task.id === 'rear') for (const s of ['L', 'R']) if (typeof f.vals[s] === 'number') S.fpiAuto[s][2] = fpiFromHeel(f.vals[s]);
+    if (f.task.id === 'medL' && f.vals.mlaa != null) S.fpiAuto.L[4] = fpiFromMlaa(f.vals.mlaa);
+    if (f.task.id === 'medR' && f.vals.mlaa != null) S.fpiAuto.R[4] = fpiFromMlaa(f.vals.mlaa);
+  }
+  for (const s of ['L', 'R']) S.fpiAuto[s].forEach((v, i) => { if (v != null && S.fpi[s][i] == null) S.fpi[s][i] = v; });
+}
+function fpiCardHtml() {
+  const opt = (s, i) => ['', -2, -1, 0, 1, 2].map(v => `<option value="${v}" ${(S.fpi[s][i] == null ? '' : S.fpi[s][i]) === v ? 'selected' : ''}>${v === '' ? '—' : v > 0 ? '+' + v : v}</option>`).join('');
+  const rows = FPI_ITEMS.map((it, i) => {
+    const auto = S.fpiAuto && (S.fpiAuto.L[i] != null || S.fpiAuto.R[i] != null);
+    return `<tr><td>${i + 1}. ${esc(it[0])}${auto ? '<small>pre-filled from your photo — check it</small>' : ''}</td><td><select data-s="L" data-i="${i}">${opt('L', i)}</select></td><td><select data-s="R" data-i="${i}">${opt('R', i)}</select></td></tr>`;
+  }).join('');
+  return `<div class="card fpi"><h2 style="margin-top:0">Foot Posture Index (FPI-6)</h2>
+    <p class="small mute">Pronation / supination score. Score each item for each foot from −2 (supinated) to +2 (pronated).</p>
+    <table><tr><th>Item</th><th>Left</th><th>Right</th></tr>${rows}
+    <tr><td><b>Total</b></td><td id="fpi-tot-L"></td><td id="fpi-tot-R"></td></tr></table>
+    <details><summary>Scoring guide</summary>${FPI_ITEMS.map((it, i) => `<p class="small"><b>${i + 1}. ${esc(it[0])}</b><br>${esc(it[1])}</p>`).join('')}
+    <p class="small"><b>Total:</b> 0 to +5 normal · +6 to +9 pronated · +10 to +12 highly pronated · −1 to −4 supinated · −5 to −12 highly supinated.</p></details></div>`;
+}
+function updateFpiTotals() {
+  for (const s of ['L', 'R']) {
+    const a = S.fpi[s], el = $('#fpi-tot-' + s); if (!el) continue;
+    if (a.every(v => v != null)) { const t = a.reduce((x, y) => x + y, 0), [c, st] = fpiClass(t); el.innerHTML = `<span class="chip ${st}">${t > 0 ? '+' : ''}${t} · ${c}</span>`; }
+    else el.innerHTML = `<span class="small mute">${a.filter(v => v != null).length}/6 scored</span>`;
+  }
+}
+function wireFpi() {
+  document.querySelectorAll('.fpi select').forEach(sel => sel.addEventListener('change', () => {
+    S.fpi[sel.dataset.s][+sel.dataset.i] = sel.value === '' ? null : +sel.value;
+    updateFpiTotals(); renderObs();
+  }));
+  updateFpiTotals();
+}
+function renderObs() {
+  const flagged = [];
+  VIEWS.forEach(v => { const d = S.data[v.key]; if (!d) return; d.res.staticRows.concat(d.res.gaitRows).filter(r => r.status === 'warn' || r.status === 'bad').forEach(r => flagged.push({ view: v.short, ...r })); });
+  lastFoot.forEach(f => f.rows.filter(r => r.status === 'warn' || r.status === 'bad').forEach(r => flagged.push({ view: 'Foot', ...r })));
+  for (const s of ['L', 'R']) {
+    const a = S.fpi[s];
+    if (a.every(v => v != null)) { const t = a.reduce((x, y) => x + y, 0), [c, st] = fpiClass(t); if (st !== 'ok') flagged.push({ view: 'FPI', label: `${s === 'L' ? 'Left' : 'Right'} foot posture`, value: `${t > 0 ? '+' : ''}${t} · ${c}`, status: st }); }
+  }
   $('#r-obs').innerHTML = `<h3>Findings to review</h3>` + (flagged.length
     ? `<ul class="obs">${flagged.map(r => `<li><span class="chip ${r.status}">${r.status === 'bad' ? 'Marked' : 'Mild'}</span> <b>${esc(r.view)}</b> · ${esc(r.label)}: ${esc(r.value)}</li>`).join('')}</ul>`
     : '<p class="mute">No measurement fell outside the screening ranges.</p>') +
     '<p class="small mute">“Mild” and “Marked” are screening flags against approximate reference ranges — not diagnoses.</p>';
-  show('results');
 }
 
 /* ---------- exports ---------- */
@@ -1004,13 +1372,14 @@ $('#btn-videos').onclick = async () => {
 $('#btn-json').onclick = () => {
   const out = { app: 'FootScope', date: new Date().toISOString(), patient: S.patient, views: {} };
   for (const v of VIEWS) { const d = S.data[v.key]; if (d) out.views[v.key] = { coverage: d.coverage, standing: d.res.staticRows, walking: d.res.gaitRows }; }
+  out.foot = lastFoot.map(f => ({ id: f.task.id, rows: f.rows })); out.fpi = S.fpi;
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }));
   a.download = `${slug(S.patient.name)}_footscope.json`; a.click();
 };
 $('#btn-new').onclick = () => {
   if (!confirm('Start a new patient? Current videos and results will be cleared from this page.')) return;
   for (const k in S.data) if (S.data[k].url) URL.revokeObjectURL(S.data[k].url);
-  S.data = {}; S.idx = 0; $('#p-name').value = $('#p-age').value = $('#p-height').value = $('#p-ft').value = $('#p-in').value = ''; updateHeightUi(); show('home');
+  S.data = {}; S.idx = 0; S.foot = {}; S.fpi = { L: Array(6).fill(null), R: Array(6).fill(null) }; $('#p-name').value = $('#p-age').value = $('#p-height').value = $('#p-ft').value = $('#p-in').value = ''; updateHeightUi(); show('home');
 };
 </script>
 </body>

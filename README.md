@@ -26,6 +26,20 @@ First load needs internet (pose model, about 10 MB, loaded from jsDelivr / Googl
 - **∠ button:** shows live joint angles on the skeleton (knees, heels, pelvis and shoulders from front/back; head, trunk, knee and ankle from the side).
 - **Height:** enter feet & inches or cm; it converts automatically.
 
+## Foot close-ups & Foot Posture Index
+
+After the three walking videos the app asks for four photos (each can be skipped; camera or gallery):
+
+1. **Heels from behind** – accurate heel (rearfoot) valgus/varus angle.
+2. **Left foot, inner side** and 3. **Right foot, inner side** – medial arch angle (MLAA) and navicular height ÷ foot length.
+4. **Both feet from above** – big-toe (hallux valgus) angle and foot toe-out/toe-in angle.
+
+Each photo has a short picture guide. Tap the photo to place numbered landmarks (a magnifier shows the spot under your finger; drag to adjust). The angles are computed from your marks and drawn on the photo.
+
+The report also has a **Foot Posture Index (FPI-6)** card for pronation / supination. Items 3 (heel position) and 5 (arch) are suggested from the photos; the clinician scores the other items and can change any of them. Total −12…+12: ≥10 highly pronated, 6–9 pronated, 0–5 normal, −1…−4 supinated, ≤−5 highly supinated.
+
+Photo-based angles are estimates and depend on landmark placement; reference ranges are approximate. X-ray remains the standard for hallux valgus.
+
 ## Notes
 
 - Screening aid only, not a diagnosis. 2-D pose estimation from a single phone camera has limits.

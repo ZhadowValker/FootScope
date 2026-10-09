@@ -118,9 +118,12 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
  .screen{display:none!important}#results{display:block!important;min-height:0}
  #results .wrap{max-width:none;padding:0}
  .card{break-inside:avoid;border-color:#cbd5e1;box-shadow:none}
- #r-views>.card{break-before:page}#r-views>.card:first-child{break-before:auto}
  #r-foot:not(:empty),#r-fpi:not(:empty){break-before:page}
- img.snap{max-height:260px;width:auto;max-width:100%;display:block}
+ img.snap{max-height:210px;width:auto;max-width:100%;display:block}
+ .card h2,.card h3{break-after:avoid}
+ .row{padding:5px 0 5px 8px;break-inside:avoid}.row small{font-size:10px}
+ .gfw{break-inside:avoid}
+ #r-views>.card{break-inside:auto}
  .gf,.gf.wide{grid-template-columns:repeat(6,1fr)}.gf figure.big{grid-column:auto}
  .gf figcaption{font-size:9px}
  .signbox{display:flex;gap:24px;margin-top:18px;font-size:12px;break-inside:avoid}
@@ -1269,7 +1272,7 @@ function renderResults() {
       ${img ? `<img class="snap" src="${img}" alt="${v.name} annotated frame">` : ''}
       <h3 style="margin-top:14px">Standing posture</h3>${d.res.staticRows.map(rowHtml).join('')}
       <h3 style="margin-top:14px">Walking</h3>${d.res.gaitRows.map(rowHtml).join('') || '<p class="mute">—</p>'}
-      <h3 style="margin-top:14px">Walking frames</h3>${gaitFramesHtml(v.key)}</div>`;
+      <div class="gfw"><h3 style="margin-top:14px">Walking frames</h3>${gaitFramesHtml(v.key)}</div></div>`;
   });
   $('#r-views').innerHTML = html;
   lastFoot = footResults();

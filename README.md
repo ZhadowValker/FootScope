@@ -16,9 +16,14 @@ First load needs internet (pose model, about 10 MB, loaded from jsDelivr / Googl
 
 1. Enter patient name, age and height (height gives centimetre values).
 2. For each view (Front, Side, Back) the app shows the phone and patient position, then opens the camera.
-3. Tap the red button: countdown, 5 s stand still, then walk (voice prompts guide each step).
+3. Tap the red button. The app tells you (on screen and by voice) to move away from the camera until the whole body fits the frame, then says "Ready. Recording in 5, 4, 3, 2, 1", then 5 s stand still, then walk.
+   Or tap **Choose video from gallery** to analyse an existing video (it should start with about 5 s standing still, then the walk).
 4. Review the video, retake if needed, go to the next view.
 5. Results show annotated frames and measurements. Use **Save / print PDF report** to export.
+
+## Report and printing
+
+The results page has a **Save / print PDF report** button. It opens the phone's print dialog; choose **Save as PDF** (or a printer). The print layout is A4, white, with the patient header, one page per view (annotated frame, readings and six walking key frames with left leg in cyan and right leg in orange), then the foot close-ups and FPI pages, and an Examiner / Signature / Date line at the end.
 
 ## Camera screen aids
 

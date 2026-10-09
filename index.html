@@ -99,11 +99,32 @@ img.snap{width:100%;max-height:420px;object-fit:contain;background:#0f172a;borde
 .fpi select{padding:6px;font-size:14px;width:72px}
 .fpi small{display:block;color:var(--mute);font-size:11px}
 details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
+#proc{position:fixed;inset:0;background:#0f172af2;color:#fff;display:none;place-content:center;text-align:center;z-index:61;padding:24px;gap:12px}
+#proc .bar2{height:8px;background:#fff3;border-radius:6px;overflow:hidden;width:min(320px,80vw);margin:6px auto}
+#proc .bar2 i{display:block;height:100%;background:#22d3ee;width:0}
+#proc button{background:#fff2;color:#fff;margin-top:10px}
+.gf{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.gf.wide{grid-template-columns:repeat(2,1fr)}
+.gf figure{margin:0;cursor:pointer}.gf figure.big{grid-column:1/-1}
+.gf img{width:100%;display:block;border-radius:8px;background:#0f172a}
+.gf figcaption{font-size:11px;text-align:center;line-height:1.25;margin-top:2px}
+.gf figcaption span{display:block;color:var(--mute)}
+.lg{font-size:12px;font-weight:700;margin:6px 0 0}.lg .l{color:#0891b2}.lg .r{color:#c2410c}
+.signbox{display:none}
 @media print{
- body{background:#fff}.noprint,#toast,#loader{display:none!important}
- .screen{display:none!important}#results{display:block!important}
- .card{break-inside:avoid;border-color:#cbd5e1}
- img.snap{max-height:300px}
+ @page{size:A4;margin:12mm}
+ html,body{background:#fff;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .noprint,#toast,#loader,#proc{display:none!important}
+ .screen{display:none!important}#results{display:block!important;min-height:0}
+ #results .wrap{max-width:none;padding:0}
+ .card{break-inside:avoid;border-color:#cbd5e1;box-shadow:none}
+ #r-views>.card{break-before:page}#r-views>.card:first-child{break-before:auto}
+ #r-foot:not(:empty),#r-fpi:not(:empty){break-before:page}
+ img.snap{max-height:260px;width:auto;max-width:100%;display:block}
+ .gf,.gf.wide{grid-template-columns:repeat(6,1fr)}.gf figure.big{grid-column:auto}
+ .gf figcaption{font-size:9px}
+ .signbox{display:flex;gap:24px;margin-top:18px;font-size:12px;break-inside:avoid}
+ .signbox div{flex:1;border-top:1px solid #64748b;padding-top:4px;color:#475569}
 }
 </style>
 </head>
@@ -138,8 +159,6 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
    <h3>Recording options</h3>
    <label for="o-cam">Camera</label>
    <select id="o-cam"><option value="environment">Rear camera (recommended)</option><option value="user">Front camera (self-recording)</option></select>
-   <label for="o-delay">Countdown before each recording</label>
-   <select id="o-delay"><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="15">15 seconds</option></select>
    <label class="chk"><input id="o-voice" type="checkbox" checked> Voice prompts (“Stand still”, “Walk”)</label>
   </div>
 
@@ -160,6 +179,9 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
    <p class="small mute" style="margin-top:8px">On the camera screen a <b>level line</b> shows whether the phone is straight — aim for green. The <b>∠</b> button shows live joint angles.</p></div>
   <div class="card"><h3>What the recording does</h3><div class="timeline" id="b-time"></div></div>
   <button class="btn" id="btn-open">Open camera</button>
+  <button class="btn sec" id="btn-gal">Choose video from gallery</button>
+  <input type="file" id="f-vid" accept="video/*" hidden>
+  <p class="small mute" style="margin:4px 0 0">Gallery video: it should start with about 5 seconds standing still, then the walk, with the whole body in view.</p>
   <button class="btn ghost" id="btn-brief-back">← Back</button>
  </div>
 </section>
@@ -241,6 +263,7 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
   <div id="r-views"></div>
   <div id="r-foot"></div>
   <div id="r-fpi"></div>
+  <div class="signbox"><div>Examiner</div><div>Signature</div><div>Date</div></div>
   <p class="disc">Screening aid based on 2-D video pose estimation (MediaPipe). Not a diagnosis. Reference ranges are approximate; confirm findings with clinical examination and, where needed, imaging or gait-lab assessment.</p>
   <div class="noprint">
    <button class="btn" id="btn-print">Save / print PDF report</button>
@@ -253,6 +276,7 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
  </div>
 </section>
 
+<div id="proc"><div style="font-size:18px;font-weight:700" id="proc-txt">Analysing video…</div><div class="bar2"><i id="proc-fill"></i></div><div class="small" style="opacity:.75">Keep this page open</div><div><button id="proc-cancel">Cancel</button></div></div>
 <div id="toast"></div>
 <div id="loader"><div>Loading analysis engine…<div class="small" style="opacity:.7;margin-top:8px">First load needs internet (about 10 MB)</div></div></div>
 
@@ -640,7 +664,7 @@ let stream = null, camOn = false, wake = null, lastTs = 0, lastStatusT = 0;
 let rec = newRec();
 let audioCtx = null;
 
-function newRec() { return { state: 'idle', frames: [], attempts: 0, hits: 0, chunks: [], mr: null, timer: null }; }
+function newRec() { return { state: 'idle', frames: [], attempts: 0, hits: 0, chunks: [], mr: null, timer: null, thumbs: [], lastThumb: -1, sub: 'frame', okSince: 0, badSince: 0, lastSay: 0 }; }
 
 /* ---------- UI helpers ---------- */
 function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id)); window.scrollTo(0, 0); }
@@ -672,7 +696,7 @@ poseP = initPose();
 /* ---------- home ---------- */
 function loadPrefs() {
   try { const p = JSON.parse(localStorage.getItem('footscope-prefs') || '{}');
-    if (p.delay) $('#o-delay').value = p.delay; if (p.facing) $('#o-cam').value = p.facing; if (p.voice === false) $('#o-voice').checked = false;
+    if (p.facing) $('#o-cam').value = p.facing; if (p.voice === false) $('#o-voice').checked = false;
   } catch (e) {}
 }
 loadPrefs();
@@ -701,8 +725,8 @@ $('#btn-start').onclick = async () => {
   const hh = readHeight(), h = hh.cm;
   if (hh.raw && (isNaN(h) || h < 80 || h > 230)) { toast('Please enter a valid height (about 2 ft 8 in to 7 ft 6 in, or 80–230 cm).'); return; }
   S.patient = { name: $('#p-name').value.trim(), age: $('#p-age').value.trim(), height: h ? Math.round(h * 10) / 10 : null };
-  S.delay = +$('#o-delay').value; S.facing = $('#o-cam').value; S.voice = $('#o-voice').checked;
-  try { localStorage.setItem('footscope-prefs', JSON.stringify({ delay: S.delay, facing: S.facing, voice: S.voice })); } catch (e) {}
+  S.facing = $('#o-cam').value; S.voice = $('#o-voice').checked;
+  try { localStorage.setItem('footscope-prefs', JSON.stringify({ facing: S.facing, voice: S.voice })); } catch (e) {}
   if (!pose) {
     $('#loader').style.display = 'grid';
     await Promise.race([poseP, sleep(25000)]);
@@ -740,7 +764,7 @@ function renderBrief() {
   $('#b-orient').textContent = v.orient === 'portrait' ? '📱 Hold / place the phone UPRIGHT (portrait)' : '📱 Turn the phone SIDEWAYS (landscape)';
   $('#b-diagram').innerHTML = diagram(v.key);
   $('#b-list').innerHTML = v.steps.map(s => `<li>${s}</li>`).join('');
-  $('#b-time').innerHTML = `<div><b>${S.delay}s</b>Get ready</div><div><b>${STAND}s</b>Stand still</div><div><b>${v.walk}s</b>Walk</div>`;
+  $('#b-time').innerHTML = `<div><b>✓</b>Frame check</div><div><b>5-4-3-2-1</b>Ready</div><div><b>${STAND}s</b>Stand still</div><div><b>${v.walk}s</b>Walk</div>`;
 }
 $('#btn-open').onclick = openCam;
 $('#btn-brief-back').onclick = () => { if (S.idx > 0) { S.idx--; renderBrief(); } else show('home'); };
@@ -786,7 +810,7 @@ function setStatus(txt, cls) { const s = $('#status'); s.textContent = txt; s.cl
 function setRecUi() {
   const r = $('#recbtn'), idle = rec.state === 'idle';
   r.classList.toggle('on', !idle);
-  $('#cam-hint').textContent = idle ? `Check the whole body is in view, then tap the red button. Recording starts after a ${S.delay}-second countdown.` : (rec.state === 'ready' ? 'Tap again to cancel' : 'Tap to stop early');
+  $('#cam-hint').textContent = idle ? `Tap the red button. The app tells you when to step back, then counts 5-4-3-2-1 before recording.` : (rec.state === 'ready' ? (rec.sub === 'frame' ? 'Move away from the camera until the frame turns green. Tap to cancel.' : 'Tap to cancel') : 'Tap to stop early');
   if (idle) { $('#big').textContent = ''; $('#ptxt').textContent = ''; $('#barfill').style.width = '0'; }
 }
 
@@ -814,6 +838,12 @@ const KEYPTS = [0, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 29, 30,
 
 function draw(lm, v) {
   const c = $('#ov'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+  if (rec.state === 'ready') {
+    const d0 = window.devicePixelRatio || 1;
+    g.save(); g.lineWidth = 3 * d0; g.setLineDash([14 * d0, 10 * d0]); g.strokeStyle = rec.frOk ? '#4ade80' : '#fbbf24';
+    const rx = c.width * 0.07, ry = c.height * 0.14, rw = c.width * 0.86, rh = c.height * 0.64;
+    g.beginPath(); if (g.roundRect) g.roundRect(rx, ry, rw, rh, 20 * d0); else g.rect(rx, ry, rw, rh); g.stroke(); g.restore();
+  }
   if (!lm) return;
   const vw = v.videoWidth, vh = v.videoHeight, sc = Math.min(c.width / vw, c.height / vh);
   const ox = (c.width - vw * sc) / 2, oy = (c.height - vh * sc) / 2, mir = S.facing === 'user';
@@ -933,8 +963,22 @@ function guidance(lm, v) {
 function handleFrame(lm, v) {
   draw(lm, v);
   const now = performance.now();
-  if (rec.state === 'idle' || rec.state === 'ready') {
+  if (rec.state === 'idle') {
     if (now - lastStatusT > 250) { lastStatusT = now; const [m, c] = guidance(lm, v); setStatus(m, c); }
+  } else if (rec.state === 'ready') {
+    if (now - lastStatusT > 250) {
+      lastStatusT = now; const c = frameCheck(lm, v); rec.frOk = c.ok;
+      if (rec.sub === 'frame') {
+        setStatus(c.msg, c.ok ? 'ok' : 'warn');
+        if (c.ok) { if (!rec.okSince) rec.okSince = now; }
+        else { rec.okSince = 0; if (c.say && now - rec.lastSay > 4500) { rec.lastSay = now; say(c.say); } }
+        if (rec.okSince && now - rec.okSince > 1200) startCount(now);
+      } else {
+        setStatus('Hold still · recording soon', c.ok ? 'ok' : 'warn');
+        if (!c.ok) { rec.badSince = rec.badSince || now; if (now - rec.badSince > 1500) { rec.sub = 'frame'; rec.okSince = 0; rec.badSince = 0; rec.lastSay = now; say('Stay in the frame'); setRecUi(); } }
+        else rec.badSince = 0;
+      }
+    }
   } else if (rec.state === 'stand' || rec.state === 'walk') {
     setStatus('● REC', 'rec');
     rec.attempts++;
@@ -944,6 +988,7 @@ function handleFrame(lm, v) {
       for (let i = 0; i < 33; i++) { p[i * 3] = lm[i].x * vw; p[i * 3 + 1] = lm[i].y * vh; p[i * 3 + 2] = lm[i].visibility == null ? 1 : lm[i].visibility; }
       const t = (now - rec.t0) / 1000;
       rec.frames.push({ t, ph: rec.state, p });
+      if (rec.state === 'walk' && t - rec.lastThumb >= 0.2 && rec.thumbs.length < 90) { rec.lastThumb = t; rec.thumbs.push({ t, c: grabThumb(v), p }); }
       if (!rec.snap && t >= STAND * 0.5 && rec.state === 'stand') {
         const sc = Math.min(1, 960 / Math.max(vw, vh)), c = document.createElement('canvas');
         c.width = Math.round(vw * sc); c.height = Math.round(vh * sc);
@@ -952,6 +997,29 @@ function handleFrame(lm, v) {
       }
     }
   }
+}
+
+/* ---------- framing check ---------- */
+function frameCheck(lm, v) {
+  const vw = v.videoWidth, vh = v.videoHeight, want = VIEWS[S.idx].orient;
+  if ((want === 'landscape') !== (vw > vh)) return { msg: 'Rotate the phone ' + (want === 'landscape' ? 'sideways' : 'upright'), say: 'Rotate the phone ' + (want === 'landscape' ? 'sideways' : 'upright'), ok: false };
+  if (!pose) return { msg: 'Camera ready (no analysis engine)', ok: true };
+  if (!lm) return { msg: 'Step into view', say: 'Step into view', ok: false };
+  const need = [0, 27, 28, 29, 30];
+  if (!need.every(i => lm[i].visibility > 0.5 && lm[i].x > 0.01 && lm[i].x < 0.99 && lm[i].y > 0.01 && lm[i].y < 0.99)) return { msg: 'Move away from the camera until your whole body fits', say: 'Move back a little', ok: false };
+  const frac = (lm[27].y + lm[28].y) / 2 - lm[0].y;
+  if (frac < 0.38) return { msg: 'Come a little closer', say: 'Come a little closer', ok: false };
+  if (frac > 0.93) return { msg: 'Move away from the camera', say: 'Move back a little', ok: false };
+  return { msg: '✓ Whole body in frame — hold still', ok: true };
+}
+function grabThumb(v) {
+  const vw = v.videoWidth, vh = v.videoHeight, sc = Math.min(1, 360 / Math.max(vw, vh)), c = document.createElement('canvas');
+  c.width = Math.round(vw * sc); c.height = Math.round(vh * sc);
+  c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+  return c;
+}
+function startCount(now) {
+  rec.sub = 'count'; rec.tCount = now; rec.lastN = 0; rec.badSince = 0; setRecUi();
 }
 
 /* ---------- recording ---------- */
@@ -975,18 +1043,19 @@ $('#recbtn').onclick = () => {
 function beginRecording() {
   const v = $('#vid'), view = VIEWS[S.idx];
   beep(1, .01); // unlock audio on user gesture
-  rec = newRec(); rec.state = 'ready'; rec.vw = v.videoWidth; rec.vh = v.videoHeight; rec.tReady = performance.now();
-  setRecUi(); say(`${view.name}. Get into position.`);
+  rec = newRec(); rec.state = 'ready'; rec.vw = v.videoWidth; rec.vh = v.videoHeight; rec.tReady = performance.now(); rec.lastSay = rec.tReady;
+  setRecUi(); say(`${view.name}. Move away from the camera until your whole body is in the frame.`);
   rec.timer = setInterval(tick, 100);
 }
 function tick() {
   const now = performance.now(), view = VIEWS[S.idx];
   if (rec.state === 'ready') {
-    const left = S.delay - (now - rec.tReady) / 1000;
+    if (rec.sub === 'frame') { $('#big').textContent = ''; $('#ptxt').textContent = 'Move away from the camera until your whole body fits'; $('#barfill').style.width = '0'; return; }
+    const left = 5 - (now - rec.tCount) / 1000;
     if (left > 0) {
       const n = Math.ceil(left);
-      if (n !== rec.lastN) { rec.lastN = n; beep(660, .08); }
-      $('#big').textContent = n; $('#ptxt').textContent = 'Get into position'; $('#barfill').style.width = '0';
+      if (n !== rec.lastN) { rec.lastN = n; beep(660, .08); say(n === 5 ? 'Ready. Recording in 5' : String(n)); }
+      $('#big').textContent = n; $('#ptxt').textContent = 'Ready. Recording in…'; $('#barfill').style.width = '0';
       return;
     }
     rec.state = 'stand'; rec.t0 = now; startMR(); say('Stand still'); beep(900, .25); vib(200); setRecUi();
@@ -1009,8 +1078,13 @@ async function finishRecording() {
     try { was.mr.stop(); } catch (e) { res(null); }
   });
   say('Done'); beep(500, .3); vib(300);
+  commitRecording(view, was, blob, was.mime || 'video/webm');
+  closeCam(); rec = newRec(); renderReview();
+}
+function commitRecording(view, was, blob, mime) {
   const d = S.data[view.key] = {
-    blob, url: blob ? URL.createObjectURL(blob) : null, mime: was.mime || 'video/webm',
+    blob, url: blob ? URL.createObjectURL(blob) : null, mime: mime,
+    thumbs: was.thumbs || [], gaitImgs: null,
     frames: was.frames, meta: { w: was.vw, h: was.vh }, snap: was.snap, snapLm: was.snapLm,
     coverage: was.attempts ? was.hits / was.attempts : 0
   };
@@ -1022,7 +1096,55 @@ async function finishRecording() {
     d.res.staticRows.unshift(row('Camera level during recording', `${f1(ap)}° ${pm < 0 ? 'down' : 'up'} · roll ${f1(ar)}°`,
       'Phone within 3° tilt and 2° roll keeps angles accurate', ap <= 3 && ar <= 2 ? 'ok' : (ap <= 6 && ar <= 4) ? 'warn' : 'bad'));
   }
-  closeCam(); rec = newRec(); renderReview();
+}
+
+
+/* ---------- video from gallery ---------- */
+let procCancel = false;
+$('#btn-gal').onclick = () => $('#f-vid').click();
+$('#proc-cancel').onclick = () => { procCancel = true; };
+$('#f-vid').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  if (!pose) { toast('The analysis engine is not loaded, so a gallery video cannot be analysed. Check the internet connection and reload.', 7000); return; }
+  try { await processVideoFile(file); } catch (err) { console.warn(err); $('#proc').style.display = 'none'; toast('Could not read that video. Try a different file, or record it with the camera.', 6000); }
+});
+async function processVideoFile(file) {
+  const view = VIEWS[S.idx], url = URL.createObjectURL(file), v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+  await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error('video')); setTimeout(() => rej(new Error('timeout')), 15000); });
+  const dur = v.duration;
+  if (!isFinite(dur) || dur < 3) throw new Error('duration');
+  const vw = v.videoWidth, vh = v.videoHeight, total = Math.min(dur, 30), step = 1 / 12;
+  const stand = Math.min(STAND, total * 0.4);
+  if ((view.orient === 'landscape') !== (vw > vh)) toast(`This ${view.name.toLowerCase()} is normally filmed ${view.orient === 'landscape' ? 'sideways' : 'upright'}. Continuing anyway.`, 5000);
+  procCancel = false; $('#proc').style.display = 'grid';
+  const was = newRec(); was.vw = vw; was.vh = vh; was.mime = file.type || 'video/mp4';
+  let ts = Math.max(performance.now(), lastTs + 1);
+  for (let t = 0; t <= total && !procCancel; t += step) {
+    $('#proc-txt').textContent = `Analysing video… ${Math.round(t / total * 100)}%`; $('#proc-fill').style.width = (t / total * 100) + '%';
+    await new Promise(res => { let done = false; const fin = () => { if (!done) { done = true; res(); } }; v.onseeked = fin; v.currentTime = Math.min(t, dur - 0.05); setTimeout(fin, 2500); });
+    let lm = null; ts += 83; lastTs = ts;
+    try { const r = pose.detectForVideo(v, ts); lm = (r.landmarks && r.landmarks[0]) || null; } catch (e) { console.warn(e); }
+    was.attempts++;
+    if (!lm) continue;
+    was.hits++;
+    const ph = t < stand ? 'stand' : 'walk', p = new Float32Array(99);
+    for (let i = 0; i < 33; i++) { p[i * 3] = lm[i].x * vw; p[i * 3 + 1] = lm[i].y * vh; p[i * 3 + 2] = lm[i].visibility == null ? 1 : lm[i].visibility; }
+    was.frames.push({ t, ph, p });
+    if (!was.snap && ph === 'stand' && t >= stand * 0.5) {
+      const sc = Math.min(1, 960 / Math.max(vw, vh)), c = document.createElement('canvas');
+      c.width = Math.round(vw * sc); c.height = Math.round(vh * sc); c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+      was.snap = c; was.snapLm = lm.map(q => ({ x: q.x, y: q.y, visibility: q.visibility }));
+    }
+    if (ph === 'walk' && t - was.lastThumb >= 0.2 && was.thumbs.length < 90) { was.lastThumb = t; was.thumbs.push({ t, c: grabThumb(v), p }); }
+  }
+  $('#proc').style.display = 'none';
+  v.removeAttribute('src'); v.load();
+  if (procCancel) { URL.revokeObjectURL(url); return; }
+  URL.revokeObjectURL(url);
+  commitRecording(view, was, file, was.mime);
+  renderReview();
 }
 
 /* ---------- review ---------- */
@@ -1083,6 +1205,59 @@ function annotate(key) {
   }
   return c.toDataURL('image/jpeg', .85);
 }
+
+/* ---------- gait key frames ---------- */
+function pickGaitFrames(key, d) {
+  if (!d.thumbs || d.thumbs.length < 4 || !d.meta.w) return [];
+  const side = key === 'side';
+  const fr = d.frames.filter(f => f.ph === 'walk' && okFrame(f, [11, 12, 23, 24, 25, 26, 27, 28], d.meta, 0.4));
+  let ev = [];
+  if (fr.length >= 12) {
+    const t = fr.map(f => f.t), torso = fr.map(f => len(sub(mid(P(f, 11), P(f, 12)), mid(P(f, 23), P(f, 24)))));
+    const sep = smooth(fr.map((f, i) => { const a = P(f, 27), b = P(f, 28); return (side ? Math.abs(a[0] - b[0]) : Math.abs(a[1] - b[1])) / torso[i]; }), 1);
+    const p95 = pct(sep, 0.95);
+    if (p95 >= (side ? 0.5 : 0.08)) {
+      const k = Math.max(3, Math.floor(fr.length * 0.2)), hx = fr.map(f => mid(P(f, 23), P(f, 24))[0]);
+      const dirX = mean(hx.slice(-k)) >= mean(hx.slice(0, k)) ? 1 : -1;
+      const pk = findPeaks(sep, t, 0.28, 0.5 * p95);
+      for (let j = 0; j < pk.length && ev.length < 6; j++) {
+        const a = P(fr[pk[j]], 27), b = P(fr[pk[j]], 28);
+        const left = side ? ((a[0] - b[0]) * dirX > 0) : (key === 'front' ? a[1] > b[1] : a[1] < b[1]);
+        ev.push({ t: t[pk[j]], title: 'Heel strike ' + (left ? 'L' : 'R') });
+        if (pk[j + 1] != null && ev.length < 6) { let mi = pk[j]; for (let q = pk[j]; q <= pk[j + 1]; q++) if (sep[q] < sep[mi]) mi = q; ev.push({ t: t[mi], title: 'Legs passing' }); }
+      }
+    }
+  }
+  if (ev.length < 4) { const w = d.thumbs; ev = [0, 1, 2, 3, 4, 5].map(i => ({ t: w[Math.round(i * (w.length - 1) / 5)].t, title: 'Walking' })); }
+  const out = [], used = new Set();
+  for (const e of ev.slice(0, 6)) {
+    let best = null, bd = 1e9;
+    d.thumbs.forEach((th, i) => { const dd = Math.abs(th.t - e.t); if (dd < bd && !used.has(i)) { bd = dd; best = i; } });
+    if (best != null) { used.add(best); out.push({ th: d.thumbs[best], title: e.title }); }
+  }
+  return out.sort((a, b) => a.th.t - b.th.t);
+}
+function gaitFramesHtml(key) {
+  const d = S.data[key]; if (!d) return '';
+  if (!d.gaitImgs) {
+    const picks = pickGaitFrames(key, d), sc = d.meta.w ? 1 : 1;
+    d.gaitImgs = picks.map(({ th, title }) => {
+      const c = document.createElement('canvas'); c.width = th.c.width; c.height = th.c.height;
+      const g = c.getContext('2d'), k = c.width / d.meta.w, lw = Math.max(2, c.height / 90);
+      g.drawImage(th.c, 0, 0); g.lineCap = 'round'; g.lineWidth = lw;
+      const pt = i => [th.p[i * 3] * k, th.p[i * 3 + 1] * k], vis = i => th.p[i * 3 + 2] > 0.3;
+      const seg = (a, b, col) => { if (!vis(a) || !vis(b)) return; g.strokeStyle = col; g.beginPath(); g.moveTo(...pt(a)); g.lineTo(...pt(b)); g.stroke(); };
+      for (const [a, b] of [[11, 12], [11, 23], [12, 24], [23, 24]]) seg(a, b, 'rgba(255,255,255,.85)');
+      for (const [a, b] of [[23, 25], [25, 27], [27, 29], [29, 31], [27, 31]]) seg(a, b, '#22d3ee');
+      for (const [a, b] of [[24, 26], [26, 28], [28, 30], [30, 32], [28, 32]]) seg(a, b, '#fb923c');
+      g.fillStyle = '#fff'; for (const i of [23, 24, 25, 26, 27, 28]) if (vis(i)) { const [x, y] = pt(i); g.beginPath(); g.arc(x, y, lw * 1.2, 0, 7); g.fill(); }
+      return { url: c.toDataURL('image/jpeg', .8), title, t: th.t };
+    });
+  }
+  if (!d.gaitImgs.length) return '<p class="mute small">Not enough clear walking frames to show.</p>';
+  return `<div class="gf ${d.meta.w > d.meta.h ? 'wide' : ''}">${d.gaitImgs.map(f => `<figure onclick="this.classList.toggle('big')"><img src="${f.url}" alt="${esc(f.title)}"><figcaption>${esc(f.title)}<span>${f.t.toFixed(1)} s</span></figcaption></figure>`).join('')}</div>
+    <div class="lg"><span class="l">Cyan = left leg</span> · <span class="r">Orange = right leg</span> · tap a frame to enlarge</div>`;
+}
 function renderResults() {
   const p = S.patient, now = new Date();
   $('#r-pat').innerHTML = `<h2 style="margin-top:0">${esc(p.name || 'Unnamed patient')}</h2><div class="small mute">${p.age ? 'Age ' + esc(p.age) + ' · ' : ''}${p.height ? 'Height ' + esc(p.height) + ' cm (' + Math.floor(p.height / 2.54 / 12) + ' ft ' + ((p.height / 2.54) % 12).toFixed(1) + ' in) · ' : ''}${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
@@ -1093,7 +1268,8 @@ function renderResults() {
     html += `<div class="card"><h2 style="margin-top:0">${v.name} <span class="chip ${cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad'}" style="vertical-align:middle">${cov}% detected</span></h2>
       ${img ? `<img class="snap" src="${img}" alt="${v.name} annotated frame">` : ''}
       <h3 style="margin-top:14px">Standing posture</h3>${d.res.staticRows.map(rowHtml).join('')}
-      <h3 style="margin-top:14px">Walking</h3>${d.res.gaitRows.map(rowHtml).join('') || '<p class="mute">—</p>'}</div>`;
+      <h3 style="margin-top:14px">Walking</h3>${d.res.gaitRows.map(rowHtml).join('') || '<p class="mute">—</p>'}
+      <h3 style="margin-top:14px">Walking frames</h3>${gaitFramesHtml(v.key)}</div>`;
   });
   $('#r-views').innerHTML = html;
   lastFoot = footResults();
@@ -1362,6 +1538,7 @@ function renderObs() {
 /* ---------- exports ---------- */
 const slug = s => (s || 'patient').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'patient';
 $('#btn-print').onclick = () => window.print();
+window.addEventListener('beforeprint', () => document.querySelectorAll('#results details').forEach(x => x.open = true));
 $('#btn-videos').onclick = async () => {
   for (const v of VIEWS) {
     const d = S.data[v.key]; if (!d || !d.url) continue;

@@ -111,6 +111,7 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
 .gf figcaption span{display:block;color:var(--mute)}
 .lg{font-size:12px;font-weight:700;margin:6px 0 0}.lg .l{color:#0891b2}.lg .r{color:#c2410c}
 .signbox{display:none}
+.split{display:flex;flex-direction:column}.split .pic{order:-1}
 @media print{
  @page{size:A4;margin:12mm}
  html,body{background:#fff;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -119,7 +120,10 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
  #results .wrap{max-width:none;padding:0}
  .card{break-inside:avoid;border-color:#cbd5e1;box-shadow:none}
  #r-foot:not(:empty),#r-fpi:not(:empty){break-before:page}
- img.snap{max-height:210px;width:auto;max-width:100%;display:block}
+ .split{display:grid;grid-template-columns:minmax(0,1fr) 38%;gap:14px;align-items:start}
+ .split .pic{order:2}.split .vals{order:1}
+ .split .vals h3:first-child{margin-top:0!important}
+ img.snap{max-height:300px;width:auto;max-width:100%;display:block;margin-left:auto;border-radius:6px}
  .card h2,.card h3{break-after:avoid}
  .row{padding:5px 0 5px 8px;break-inside:avoid}.row small{font-size:10px}
  .gfw{break-inside:avoid}
@@ -1269,15 +1273,15 @@ function renderResults() {
     const d = S.data[v.key]; if (!d) return;
     const img = annotate(v.key), cov = Math.round(d.coverage * 100);
     html += `<div class="card"><h2 style="margin-top:0">${v.name} <span class="chip ${cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad'}" style="vertical-align:middle">${cov}% detected</span></h2>
-      ${img ? `<img class="snap" src="${img}" alt="${v.name} annotated frame">` : ''}
+      <div class="split">${img ? `<div class="pic"><img class="snap" src="${img}" alt="${v.name} annotated frame"></div>` : ''}<div class="vals">
       <h3 style="margin-top:14px">Standing posture</h3>${d.res.staticRows.map(rowHtml).join('')}
-      <h3 style="margin-top:14px">Walking</h3>${d.res.gaitRows.map(rowHtml).join('') || '<p class="mute">—</p>'}
+      <h3 style="margin-top:14px">Walking</h3>${d.res.gaitRows.map(rowHtml).join('') || '<p class="mute">—</p>'}</div></div>
       <div class="gfw"><h3 style="margin-top:14px">Walking frames</h3>${gaitFramesHtml(v.key)}</div></div>`;
   });
   $('#r-views').innerHTML = html;
   lastFoot = footResults();
   initFpiAuto();
-  $('#r-foot').innerHTML = lastFoot.map(f => `<div class="card"><h2 style="margin-top:0">Foot · ${esc(f.task.title)}</h2><img class="snap" src="${f.url}" alt="${esc(f.task.title)} with marked points"><div style="margin-top:10px">${f.rows.map(rowHtml).join('') || '<p class="mute">No measurements</p>'}</div></div>`).join('');
+  $('#r-foot').innerHTML = lastFoot.map(f => `<div class="card"><h2 style="margin-top:0">Foot · ${esc(f.task.title)}</h2><div class="split"><div class="pic"><img class="snap" src="${f.url}" alt="${esc(f.task.title)} with marked points"></div><div class="vals" style="margin-top:10px">${f.rows.map(rowHtml).join('') || '<p class="mute">No measurements</p>'}</div></div></div>`).join('');
   $('#r-fpi').innerHTML = fpiCardHtml();
   wireFpi(); renderObs();
   show('results');

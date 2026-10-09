@@ -229,11 +229,29 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
   <div class="card">
    <video id="rv-video" class="rv" controls playsinline></video>
    <p id="rv-cov" class="small" style="margin-top:10px"></p>
+   <div id="rv-cropbox" style="display:none">
+    <label class="chk" style="margin-top:6px"><input id="rv-cropon" type="checkbox" checked> Zoom the report pictures to the legs and feet</label>
+    <img id="rv-cropimg" class="snap" alt="Cropped report picture" style="margin-top:8px;max-height:300px">
+    <p class="small mute" style="margin:4px 0 0">The saved video stays full-frame; only the pictures in the report are zoomed.</p>
+   </div>
   </div>
   <div class="card"><h3>Quick readings</h3><div id="rv-rows"></div></div>
   <button class="btn" id="btn-next"></button>
   <button class="btn sec" id="btn-retake">Retake this view</button>
   <button class="btn ghost" id="btn-skipfoot" style="display:none">Skip foot close-ups → results</button>
+ </div>
+</section>
+
+<!-- PHOTO CROP -->
+<section id="crop" class="screen">
+ <div class="wrap">
+  <div class="small mute" id="cr-prog"></div>
+  <h2 style="margin-top:2px">Crop the photo</h2>
+  <p class="small mute" id="cr-hint" style="margin:0 0 6px"></p>
+  <div class="mk-stage"><canvas id="cr-cv"></canvas></div>
+  <button class="btn" id="cr-use">Use this crop</button>
+  <div class="grid-btn"><button class="btn sec" id="cr-auto">Auto-crop again</button><button class="btn sec" id="cr-full">Use whole photo</button></div>
+  <button class="btn ghost" id="cr-back">← Retake / change photo</button>
  </div>
 </section>
 
@@ -1337,6 +1355,7 @@ function commitRecording(view, was, blob, mime) {
     frames: was.frames, meta: { w: was.vw, h: was.vh }, snap: was.snap, snapLm: was.snapLm,
     coverage: was.attempts ? was.hits / was.attempts : 0
   };
+  d.crop = view.test ? null : legsCrop(d.frames, d.meta); d.cropOn = !!d.crop;
   d.res = d.frames.length
     ? (view.test ? analyzeTest(view.key, d.frames, d.meta, S.patient.height, parseFloat(S.patient.age) || null) : analyzeFrames(view.key, d.frames, d.meta, S.patient.height))
     : { m: null, staticRows: [row('Analysis', 'Not available', 'No body was detected, or the pose engine did not run for this recording', 'warn')], gaitRows: [] };
@@ -1405,12 +1424,18 @@ function renderReview() {
   if (d.url) { v.style.display = 'block'; v.src = d.url; } else { v.removeAttribute('src'); v.style.display = 'none'; }
   const cov = Math.round(d.coverage * 100), cls = cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad';
   $('#rv-cov').innerHTML = `Body detected in <span class="chip ${cls}">${cov}% of frames</span> ${cov < 60 ? ' — poor detection, please retake with better light and the whole body in view.' : cov < 85 ? ' — acceptable; retake if results look odd.' : ' — good.'}`;
+  const cb = $('#rv-cropbox');
+  if (d.crop && d.snap && d.snapLm) {
+    cb.style.display = ''; $('#rv-cropon').checked = d.cropOn;
+    $('#rv-cropimg').src = annotate(view.key) || '';
+  } else cb.style.display = 'none';
   $('#rv-rows').innerHTML = d.res.staticRows.slice(0, view.test ? 7 : 4).map(rowHtml).join('') || '<p class="mute">No readings</p>';
   if (view.test) { $('#btn-next').textContent = 'Add to the report →'; $('#btn-skipfoot').style.display = 'none'; show('review'); return; }
   $('#btn-next').textContent = S.idx < 2 ? `Next: ${VIEWS[S.idx + 1].name} →` : 'Next: foot close-ups →';
   $('#btn-skipfoot').style.display = S.idx === 2 ? '' : 'none';
   show('review');
 }
+$('#rv-cropon').onchange = e => { const d = S.data[curView().key]; if (!d) return; d.cropOn = e.target.checked; d.gaitImgs = null; $('#rv-cropimg').src = annotate(curView().key) || ''; };
 $('#btn-retake').onclick = () => { const k = curView().key; if (S.data[k] && S.data[k].url) URL.revokeObjectURL(S.data[k].url); delete S.data[k]; renderBrief(); show('brief'); };
 $('#btn-next').onclick = () => { $('#rv-video').pause(); if (S.test) { S.test = null; renderResults(); } else if (S.idx < 2) { S.idx++; renderBrief(); show('brief'); } else startFoot(); };
 $('#btn-skipfoot').onclick = () => { $('#rv-video').pause(); renderResults(); };
@@ -1453,7 +1478,7 @@ function annotate(key) {
       }
     }
   }
-  return c.toDataURL('image/jpeg', .85);
+  return applyCrop(c, cropOf(d), c.width / d.meta.w).toDataURL('image/jpeg', .85);
 }
 
 /* ---------- gait key frames ---------- */
@@ -1501,11 +1526,11 @@ function gaitFramesHtml(key) {
       for (const [a, b] of [[23, 25], [25, 27], [27, 29], [29, 31], [27, 31]]) seg(a, b, '#22d3ee');
       for (const [a, b] of [[24, 26], [26, 28], [28, 30], [30, 32], [28, 32]]) seg(a, b, '#fb923c');
       g.fillStyle = '#fff'; for (const i of [23, 24, 25, 26, 27, 28]) if (vis(i)) { const [x, y] = pt(i); g.beginPath(); g.arc(x, y, lw * 1.2, 0, 7); g.fill(); }
-      return { url: c.toDataURL('image/jpeg', .8), title, t: th.t };
+      return { url: applyCrop(c, cropOf(d), k).toDataURL('image/jpeg', .8), title, t: th.t };
     });
   }
   if (!d.gaitImgs.length) return '<p class="mute small">Not enough clear walking frames to show.</p>';
-  return `<div class="gf ${d.meta.w > d.meta.h ? 'wide' : ''}">${d.gaitImgs.map(f => `<figure onclick="this.classList.toggle('big')"><img src="${f.url}" alt="${esc(f.title)}"><figcaption>${esc(f.title)}<span>${f.t.toFixed(1)} s</span></figcaption></figure>`).join('')}</div>
+  return `<div class="gf ${cropOf(d) ? (cropOf(d).w > cropOf(d).h ? 'wide' : '') : (d.meta.w > d.meta.h ? 'wide' : '')}">${d.gaitImgs.map(f => `<figure onclick="this.classList.toggle('big')"><img src="${f.url}" alt="${esc(f.title)}"><figcaption>${esc(f.title)}<span>${f.t.toFixed(1)} s</span></figcaption></figure>`).join('')}</div>
     <div class="lg"><span class="l">Cyan = left leg</span> · <span class="r">Orange = right leg</span> · tap a frame to enlarge</div>`;
 }
 function renderResults() {
@@ -1796,7 +1821,7 @@ for (const id of ['#f-cam', '#f-gal']) $(id).addEventListener('change', async e 
   toast('Opening photo…', 2500);
   const img = await loadPhoto(file);
   if (!img) { toast('Could not open that photo. Try another one.'); return; }
-  startMark(img);
+  startCrop(img);
 });
 async function loadPhoto(file) {
   let src;
@@ -1809,6 +1834,92 @@ async function loadPhoto(file) {
   const c = document.createElement('canvas'); c.width = Math.round(sw * k); c.height = Math.round(sh * k);
   c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
   return c;
+}
+
+
+/* ---------- photo crop (auto box around the feet/legs, then adjust) ---------- */
+function autoCropBox(img) {
+  const k = Math.min(1, 240 / Math.max(img.width, img.height)), w = Math.max(16, Math.round(img.width * k)), h = Math.max(16, Math.round(img.height * k));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, w, h);
+  try { return cropBoxFromRgba(g.getImageData(0, 0, w, h).data, w, h); } catch (e) { return null; }
+}
+/* union of the large foreground blobs + margin; null if nothing sensible (then the whole photo is used) */
+function cropBoxFromRgba(rgba, w, h) {
+  const m = footMask(rgba, w, h), { lab, list } = comps(m, w, h), keep = new Set(list.filter(c => c.n > 0.012 * w * h).map(c => c.id));
+  if (!keep.size) return null;
+  let x0 = w, x1 = -1, y0 = h, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (keep.has(lab[y * w + x])) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, mx = 0.14 * bw + 0.02 * w, my = 0.10 * bh + 0.02 * h;
+  const b = { x0: Math.max(0, x0 - mx) / w, y0: Math.max(0, y0 - my) / h, x1: Math.min(w, x1 + 1 + mx) / w, y1: Math.min(h, y1 + 1 + my) / h };
+  if ((b.x1 - b.x0) * (b.y1 - b.y0) > 0.9 || (b.x1 - b.x0) < 0.2 || (b.y1 - b.y0) < 0.2) return null;
+  return b;
+}
+let cr = null;
+function startCrop(img) {
+  cr = { img, box: autoCropBox(img) || { x0: 0, y0: 0, x1: 1, y1: 1 }, drag: null };
+  $('#cr-prog').textContent = `Foot photo ${fidx + 1} of ${FOOT_TASKS.length} · ${FOOT_TASKS[fidx].title}`;
+  $('#cr-hint').textContent = 'Drag the corners so the crop holds just the ' + (FOOT_TASKS[fidx].id === 'rear' ? 'two heels and lower legs' : FOOT_TASKS[fidx].id === 'top' ? 'two feet, heel to toes' : 'whole foot and the ankle bone') + (cr.box.x0 + cr.box.y0 > 0 || cr.box.x1 < 1 || cr.box.y1 < 1 ? ' (suggested automatically).' : '.');
+  show('crop'); drawCrop();
+}
+function drawCrop() {
+  const cv = $('#cr-cv'), im = cr.img, r = cv.getBoundingClientRect(), k = im.width / (r.width || 360);
+  if (cv.width !== im.width) cv.width = im.width; if (cv.height !== im.height) cv.height = im.height;
+  const g = cv.getContext('2d'), b = cr.box, X0 = b.x0 * cv.width, Y0 = b.y0 * cv.height, W = (b.x1 - b.x0) * cv.width, H = (b.y1 - b.y0) * cv.height;
+  g.clearRect(0, 0, cv.width, cv.height); g.drawImage(im, 0, 0);
+  g.fillStyle = 'rgba(15,23,42,.62)'; g.beginPath(); g.rect(0, 0, cv.width, cv.height); g.rect(X0, Y0, W, H); g.fill('evenodd');
+  g.strokeStyle = '#fff'; g.lineWidth = 2 * k; g.strokeRect(X0, Y0, W, H);
+  g.fillStyle = '#f59e0b'; for (const [x, y] of [[X0, Y0], [X0 + W, Y0], [X0, Y0 + H], [X0 + W, Y0 + H]]) { g.beginPath(); g.arc(x, y, 9 * k, 0, 7); g.fill(); g.stroke(); }
+}
+{
+  const cv = $('#cr-cv');
+  const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height, r }; };
+  cv.addEventListener('pointerdown', e => {
+    if (!cr) return; e.preventDefault(); const q = pos(e), b = cr.box; let best = 34, hit = null;
+    for (const [cx, cy, n] of [[b.x0, b.y0, 'tl'], [b.x1, b.y0, 'tr'], [b.x0, b.y1, 'bl'], [b.x1, b.y1, 'br']]) { const d = Math.hypot((cx - q.x) * q.r.width, (cy - q.y) * q.r.height); if (d < best) { best = d; hit = n; } }
+    if (!hit && q.x > b.x0 && q.x < b.x1 && q.y > b.y0 && q.y < b.y1) hit = 'move';
+    if (!hit) return; cr.drag = { hit, q, b: { ...b } }; try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!cr || !cr.drag) return; e.preventDefault(); const q = pos(e), d = cr.drag, b = { ...d.b }, min = 0.12, c = v => Math.max(0, Math.min(1, v));
+    if (d.hit === 'move') { const dx = q.x - d.q.x, dy = q.y - d.q.y, w = b.x1 - b.x0, h = b.y1 - b.y0; b.x0 = Math.max(0, Math.min(1 - w, b.x0 + dx)); b.y0 = Math.max(0, Math.min(1 - h, b.y0 + dy)); b.x1 = b.x0 + w; b.y1 = b.y0 + h; }
+    else { if (d.hit[1] === 'l') b.x0 = Math.min(b.x1 - min, c(q.x)); else b.x1 = Math.max(b.x0 + min, c(q.x)); if (d.hit[0] === 't') b.y0 = Math.min(b.y1 - min, c(q.y)); else b.y1 = Math.max(b.y0 + min, c(q.y)); }
+    cr.box = b; drawCrop();
+  });
+  const end = () => { if (cr) cr.drag = null; }; cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+}
+function cropCanvas(img, b) {
+  const sx = Math.round(b.x0 * img.width), sy = Math.round(b.y0 * img.height), sw = Math.max(16, Math.round((b.x1 - b.x0) * img.width)), sh = Math.max(16, Math.round((b.y1 - b.y0) * img.height));
+  const c = document.createElement('canvas'); c.width = sw; c.height = sh; c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh); return c;
+}
+$('#cr-use').onclick = () => { if (!cr) return; const out = cropCanvas(cr.img, cr.box); cr = null; startMark(out); };
+$('#cr-full').onclick = () => { if (!cr) return; const im = cr.img; cr = null; startMark(im); };
+$('#cr-auto').onclick = () => { if (!cr) return; cr.box = autoCropBox(cr.img) || { x0: 0, y0: 0, x1: 1, y1: 1 }; drawCrop(); };
+$('#cr-back').onclick = () => { cr = null; renderFBrief(); show('fbrief'); };
+
+/* ---------- video: zoom the report pictures to the legs and feet ---------- */
+/* box (in video pixels) around hips→feet over the whole recording, with margin; null if the legs are not tracked */
+function legsCrop(frames, meta) {
+  const xs = [], ys = [];
+  for (const f of frames) for (const i of [23, 24, 25, 26, 27, 28, 29, 30, 31, 32]) {
+    if (f.p[i * 3 + 2] < 0.4) continue; xs.push(f.p[i * 3]); ys.push(f.p[i * 3 + 1]);
+  }
+  if (xs.length < 40) return null;
+  let x0 = pct(xs, 0.02), x1 = pct(xs, 0.98), y0 = pct(ys, 0.02), y1 = pct(ys, 0.98), w = x1 - x0, h = y1 - y0;
+  if (w < 1 || h < 1) return null;
+  x0 -= 0.16 * w + 0.03 * h; x1 += 0.16 * w + 0.03 * h; y0 -= 0.12 * h; y1 += 0.08 * h;
+  let cx = (x0 + x1) / 2, cy = (y0 + y1) / 2; w = x1 - x0; h = y1 - y0;
+  if (w / h < 0.6) w = 0.6 * h; if (w / h > 1.6) h = w / 1.6;     // keep a sensible picture shape
+  w = Math.min(w, meta.w); h = Math.min(h, meta.h);
+  x0 = Math.max(0, Math.min(meta.w - w, cx - w / 2)); y0 = Math.max(0, Math.min(meta.h - h, cy - h / 2));
+  if (w * h > 0.85 * meta.w * meta.h) return null;                     // nothing worth zooming
+  return { x: x0, y: y0, w, h };
+}
+const cropOf = d => (d && d.cropOn && d.crop) ? d.crop : null;
+function applyCrop(c, crop, scale) {      // crop is in video px; scale = canvas px per video px
+  if (!crop) return c;
+  const sx = Math.round(crop.x * scale), sy = Math.round(crop.y * scale), sw = Math.max(16, Math.round(crop.w * scale)), sh = Math.max(16, Math.round(crop.h * scale)), o = document.createElement('canvas');
+  o.width = sw; o.height = sh; o.getContext('2d').drawImage(c, sx, sy, sw, sh, 0, 0, sw, sh); return o;
 }
 
 /* ---------- landmark marking ---------- */
@@ -1991,7 +2102,7 @@ $('#btn-videos').onclick = async () => {
 };
 $('#btn-json').onclick = () => {
   const out = { app: 'FootScope', date: new Date().toISOString(), patient: S.patient, views: {} };
-  for (const v of VIEWS.concat(TESTS)) { const d = S.data[v.key]; if (d) out.views[v.key] = { coverage: d.coverage, standing: d.res.staticRows, walking: d.res.gaitRows }; }
+  for (const v of VIEWS.concat(TESTS)) { const d = S.data[v.key]; if (d) out.views[v.key] = { coverage: d.coverage, reportCrop: d.cropOn ? d.crop : null, standing: d.res.staticRows, walking: d.res.gaitRows }; }
   out.foot = lastFoot.map(f => ({ id: f.task.id, referenceMm: f.refMm, autoSuggestedPoints: f.auto, rows: f.rows })); out.fpi = S.fpi;
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }));
   a.download = `${slug(S.patient.name)}_footscope.json`; a.click();

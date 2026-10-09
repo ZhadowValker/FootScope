@@ -61,6 +61,11 @@ Optional recordings from the home screen or the results screen, using the same f
 
 These are screening measures from 2-D phone video; sway, bounce and running values have no validated cut-offs for this method, so they are shown for comparison (left vs right, before vs after) rather than as pass/fail.
 
+## Cropping
+
+- **Foot photos** (camera or gallery) open a crop screen first. A box is suggested automatically around the feet/legs; drag the corners (or the box) to adjust, or choose the whole photo. Marking then happens on the cropped picture.
+- **Videos** (camera or gallery): the report pictures and walking frames are zoomed to the hips-to-feet area (the legs and heels), worked out from the tracked body. A checkbox on the review screen turns the zoom off. The saved video file itself stays full-frame.
+
 ## Notes
 
 - Screening aid only, not a diagnosis. 2-D pose estimation from a single phone camera has limits.

@@ -20,6 +20,12 @@ First load needs internet (pose model, about 10 MB, loaded from jsDelivr / Googl
 4. Review the video, retake if needed, go to the next view.
 5. Results show annotated frames and measurements. Use **Save / print PDF report** to export.
 
+## Camera screen aids
+
+- **Level line + tilt message:** uses the phone's tilt sensor. Green means the phone is straight; the tilt is saved in the report. (iPhone asks for motion permission once.)
+- **∠ button:** shows live joint angles on the skeleton (knees, heels, pelvis and shoulders from front/back; head, trunk, knee and ankle from the side).
+- **Height:** enter feet & inches or cm; it converts automatically.
+
 ## Notes
 
 - Screening aid only, not a diagnosis. 2-D pose estimation from a single phone camera has limits.

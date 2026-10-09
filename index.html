@@ -64,6 +64,15 @@ ol.instr li::before{content:counter(n);position:absolute;left:0;top:8px;width:28
 .center .txt{font-size:24px;font-weight:700;padding:0 20px}
 .bar{height:6px;background:#fff3;border-radius:6px;overflow:hidden;width:100%;max-width:420px}
 .bar i{display:block;height:100%;background:#22c55e;width:0}
+#status{flex:1;min-width:0;font-size:13px;line-height:1.25}
+.pill.bad{background:#b91c1ccc}
+.iconbtn.on{background:#0f766ecc}
+.tilt{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 68px);z-index:3;font-size:13px;padding:6px 12px;white-space:nowrap;display:none}
+.lvl{position:absolute;left:50%;top:50%;width:0;height:0;z-index:2;pointer-events:none;display:none}
+.lvl i{position:absolute;left:-90px;width:180px;height:3px;margin-top:-1.5px;border-radius:2px;background:#4ade80;transition:transform .1s linear,background .2s}
+.lvl b{position:absolute;width:14px;height:14px;border:2px solid #fff9;border-radius:50%;left:-7px;top:-7px}
+.lvl s{position:absolute;top:-1px;width:16px;height:2px;background:#fff9}
+.lvl s.a{left:-112px}.lvl s.b{left:96px}
 /* review & results */
 video.rv{width:100%;max-height:60vh;background:#000;border-radius:12px}
 .row{display:flex;justify-content:space-between;gap:12px;padding:10px 0 10px 10px;border-top:1px solid var(--line);border-left:4px solid transparent}
@@ -135,7 +144,8 @@ img.snap{width:100%;max-height:420px;object-fit:contain;background:#0f172a;borde
   <h2 id="b-title"></h2>
   <span class="orient" id="b-orient"></span>
   <div class="card diagram" id="b-diagram"></div>
-  <div class="card"><h3>Set-up</h3><ol class="instr" id="b-list"></ol></div>
+  <div class="card"><h3>Set-up</h3><ol class="instr" id="b-list"></ol>
+   <p class="small mute" style="margin-top:8px">On the camera screen a <b>level line</b> shows whether the phone is straight — aim for green. The <b>∠</b> button shows live joint angles.</p></div>
   <div class="card"><h3>What the recording does</h3><div class="timeline" id="b-time"></div></div>
   <button class="btn" id="btn-open">Open camera</button>
   <button class="btn ghost" id="btn-brief-back">← Back</button>
@@ -150,8 +160,11 @@ img.snap{width:100%;max-height:420px;object-fit:contain;background:#0f172a;borde
   <div class="topbar">
    <button class="iconbtn" id="btn-cam-close" aria-label="Close camera">✕</button>
    <div class="pill" id="status">Starting camera…</div>
+   <button class="iconbtn on" id="btn-ang" aria-label="Show or hide live angles">∠</button>
    <button class="iconbtn" id="btn-flip" aria-label="Switch camera">⟲</button>
   </div>
+  <div class="pill tilt" id="tilt"></div>
+  <div class="lvl" id="lvl"><s class="a"></s><s class="b"></s><i id="lvl-line"></i><b></b></div>
   <div class="center"><div class="big" id="big"></div><div class="txt" id="ptxt"></div></div>
   <div class="bottombar">
    <div class="bar"><i id="barfill"></i></div>
@@ -508,7 +521,7 @@ const VIEWS = [
       '<b>When you hear “Walk”</b>, walk straight away from the phone at a natural pace.'] }
 ];
 
-const S = { patient: {}, idx: 0, delay: 5, voice: true, facing: 'environment', data: {} };
+const S = { patient: {}, idx: 0, delay: 5, voice: true, facing: 'environment', data: {}, liveAng: true };
 let pose = null, poseErr = 0, poseP = null;
 let stream = null, camOn = false, wake = null, lastTs = 0, lastStatusT = 0;
 let rec = newRec();
@@ -621,6 +634,8 @@ $('#btn-brief-back').onclick = () => { if (S.idx > 0) { S.idx--; renderBrief(); 
 
 /* ---------- camera ---------- */
 async function openCam() {
+  const motionP = askMotion(); // must be requested inside the tap (iOS)
+  liveEma = {};
   show('cam'); setStatus('Starting camera…', '');
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Camera is not available. Open this page over HTTPS in a modern browser.', 6000); show('brief'); return; }
   try {
@@ -632,11 +647,13 @@ async function openCam() {
   try { wake = await navigator.wakeLock.request('screen'); } catch (e) {}
   rec = newRec(); setRecUi();
   camOn = true; resizeOv(); scheduleFrame();
+  if (await motionP) startTilt();
 }
 function closeCam() {
   camOn = false; clearInterval(rec.timer);
   if (stream) stream.getTracks().forEach(t => t.stop()); stream = null;
   try { wake && wake.release(); } catch (e) {} wake = null;
+  stopTilt();
   $('#vid').srcObject = null;
 }
 $('#btn-cam-close').onclick = () => {
@@ -693,6 +710,98 @@ function draw(lm, v) {
   for (const [a, b] of CONN) { if (lm[a].visibility < 0.4 || lm[b].visibility < 0.4) continue; g.beginPath(); g.moveTo(X(lm[a].x), Y(lm[a].y)); g.lineTo(X(lm[b].x), Y(lm[b].y)); g.stroke(); }
   g.fillStyle = '#fff';
   for (const i of KEYPTS) { if (lm[i].visibility < 0.4) continue; g.beginPath(); g.arc(X(lm[i].x), Y(lm[i].y), 4 * d, 0, 7); g.fill(); }
+  if (S.liveAng) drawAngles(g, lm, v, X, Y, d);
+}
+
+/* ---------- live angles overlay ---------- */
+// <live>
+let liveEma = {};
+const ema = (k, v) => { if (v == null || !isFinite(v)) return null; liveEma[k] = liveEma[k] == null ? v : liveEma[k] + 0.3 * (v - liveEma[k]); return liveEma[k]; };
+function tag(g, text, x, y, col, d) {
+  g.font = `700 ${13 * d}px system-ui,sans-serif`;
+  const w = g.measureText(text).width + 12 * d, h = 21 * d;
+  g.fillStyle = 'rgba(15,23,42,.78)'; g.beginPath();
+  if (g.roundRect) g.roundRect(x - w / 2, y - h / 2, w, h, 7 * d); else g.rect(x - w / 2, y - h / 2, w, h);
+  g.fill(); g.fillStyle = col; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y + d);
+}
+function drawAngles(g, lm, v, X, Y, d) {
+  const key = VIEWS[S.idx].key, vw = v.videoWidth, vh = v.videoHeight;
+  const p = new Float32Array(99);
+  for (let i = 0; i < 33; i++) { p[i * 3] = lm[i].x * vw; p[i * 3 + 1] = lm[i].y * vh; p[i * 3 + 2] = lm[i].visibility == null ? 1 : lm[i].visibility; }
+  const f = { p }, vis = ids => ids.every(i => lm[i].visibility > 0.5);
+  const walking = rec.state === 'walk';
+  const col = s => (walking || s === 'na') ? '#fff' : s === 'ok' ? '#4ade80' : s === 'warn' ? '#fbbf24' : '#f87171';
+  const put = (txt, i, dir, dx, st, dy = 0) => tag(g, txt, X(lm[i].x) + dir * dx * d, Y(lm[i].y) + dy * d, col(st), d);
+  if (key !== 'side') {
+    if (!vis([11, 12, 23, 24, 25, 26, 27, 28])) return;
+    const o = frontalFrame(f, null), dl = X(lm[25].x) < X(lm[26].x) ? -1 : 1; // label direction for the person's LEFT side
+    for (const [s, i, val, dr] of [['L', 25, ema('kL', o.kneeL), dl], ['R', 26, ema('kR', o.kneeR), -dl]]) {
+      const a = Math.abs(val);
+      put(`${s} ${(180 - a).toFixed(0)}°${a < 1 ? '' : val > 0 ? ' valg' : ' varus'}`, i, dr, 56, stOf(val, 3, 6));
+    }
+    if (key === 'back' && vis([29, 30])) {
+      for (const [s, i, val, dr] of [['L', 27, ema('hL', o.hindL), dl], ['R', 28, ema('hR', o.hindR), -dl]]) {
+        put(`${s} heel ${Math.abs(val).toFixed(0)}° ${val >= 0 ? 'valg' : 'varus'}`, i, dr, 72, (val >= -2 && val <= 6) ? 'ok' : 'warn', 14);
+      }
+    }
+    const tp = ema('pel', o.pelvis), ts = ema('sho', o.shoulder);
+    tag(g, `Pelvis ${Math.abs(tp).toFixed(1)}°${Math.abs(tp) < 0.5 ? '' : tp > 0 ? ' L low' : ' R low'}`, (X(lm[23].x) + X(lm[24].x)) / 2, (Y(lm[23].y) + Y(lm[24].y)) / 2, col(stOf(tp, 2, 4)), d);
+    tag(g, `Shoulders ${Math.abs(ts).toFixed(1)}°${Math.abs(ts) < 0.5 ? '' : ts > 0 ? ' L low' : ' R low'}`, (X(lm[11].x) + X(lm[12].x)) / 2, (Y(lm[11].y) + Y(lm[12].y)) / 2 - 26 * d, col(stOf(ts, 2, 4)), d);
+  } else {
+    const left = (lm[11].visibility + lm[23].visibility + lm[25].visibility + lm[27].visibility) >= (lm[12].visibility + lm[24].visibility + lm[26].visibility + lm[28].visibility);
+    const [sh, hp, kn, an, ea] = left ? [11, 23, 25, 27, 7] : [12, 24, 26, 28, 8];
+    if (!vis([sh, hp, kn, an, ea, 0])) return;
+    const o = sideFrame(f, null), dr = X(lm[0].x) > X(lm[ea].x) ? -1 : 1; // labels go behind the person
+    const cva = ema('cva', o.cva), lean = ema('lean', o.lean), knee = ema('knee', o.knee), ank = ema('ank', o.ankle);
+    put(`CVA ${cva.toFixed(0)}°`, ea, dr, 54, cva >= 50 ? 'ok' : cva >= 45 ? 'warn' : 'bad', -6);
+    put(`Lean ${Math.abs(lean).toFixed(0)}° ${lean > 0 ? 'fwd' : 'back'}`, hp, dr, 62, stOf(lean, 3, 6));
+    put(`Knee ${(180 - knee).toFixed(0)}°`, kn, dr, 56, Math.abs(knee) <= 5 ? 'ok' : Math.abs(knee) <= 10 ? 'warn' : 'bad');
+    put(`Ankle ${ank.toFixed(0)}°`, an, dr, 56, 'na', -4);
+  }
+}
+// </live>
+$('#btn-ang').onclick = () => { S.liveAng = !S.liveAng; $('#btn-ang').classList.toggle('on', S.liveAng); };
+
+/* ---------- phone level (tilt sensor) ---------- */
+let tilt = null, tiltT = 0;
+function askMotion() {
+  try {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function')
+      return DeviceOrientationEvent.requestPermission().then(r => r === 'granted').catch(() => false);
+  } catch (e) {}
+  return Promise.resolve(typeof DeviceOrientationEvent !== 'undefined');
+}
+function startTilt() { window.addEventListener('deviceorientation', onTilt); }
+function stopTilt() { window.removeEventListener('deviceorientation', onTilt); tilt = null; updateTiltUi(); }
+function onTilt(e) {
+  if (e.beta == null || e.gamma == null) { tilt = null; return; }
+  const b = e.beta * rad, gm = e.gamma * rad;
+  // direction of "up" in the phone's own axes
+  const vx = -Math.sin(gm) * Math.cos(b), vy = Math.sin(b), vz = Math.cos(gm) * Math.cos(b);
+  const sgn = S.facing === 'environment' ? -1 : 1;                    // rear camera looks along −z, front along +z
+  const pitch = Math.asin(Math.max(-1, Math.min(1, sgn * vz))) / rad;   // + = camera aims up, − = aims down
+  let roll = Math.atan2(vx, vy) / rad;
+  roll = (((roll + 45) % 90) + 90) % 90 - 45;                          // deviation from the nearest upright/sideways position
+  tilt = { pitch, roll };
+  if (rec.state === 'stand') (rec.tiltS || (rec.tiltS = [])).push(tilt);
+  const now = performance.now();
+  if (now - tiltT > 100) { tiltT = now; updateTiltUi(); }
+}
+function updateTiltUi() {
+  const el = $('#tilt'), lv = $('#lvl');
+  if (!tilt) { el.style.display = 'none'; lv.style.display = 'none'; return; }
+  const ap = Math.abs(tilt.pitch), ar = Math.abs(tilt.roll);
+  const st = (ap <= 2.5 && ar <= 2) ? 'ok' : (ap <= 5 && ar <= 4) ? 'warn' : 'bad';
+  let msg;
+  if (ap > 40) msg = 'Hold the phone upright';
+  else if (ap > 2.5) msg = `Tilt the phone ${tilt.pitch < 0 ? 'up' : 'down'} ${ap.toFixed(0)}°`;
+  else if (ar > 2) msg = `Straighten the phone ${ar.toFixed(0)}°`;
+  else msg = `✓ Phone level (${ap.toFixed(1)}° · ${ar.toFixed(1)}°)`;
+  el.style.display = 'block'; el.className = 'pill tilt ' + st; el.textContent = msg;
+  lv.style.display = rec.state === 'idle' ? 'block' : 'none';
+  const line = $('#lvl-line');
+  line.style.transform = `rotate(${tilt.roll}deg)`;
+  line.style.background = st === 'ok' ? '#4ade80' : st === 'warn' ? '#fbbf24' : '#f87171';
 }
 
 function guidance(lm, v) {
@@ -795,6 +904,11 @@ async function finishRecording() {
   d.res = d.frames.length
     ? analyzeFrames(view.key, d.frames, d.meta, S.patient.height)
     : { m: null, staticRows: [row('Analysis', 'Not available', 'No body was detected, or the pose engine did not run for this recording', 'warn')], gaitRows: [] };
+  if (was.tiltS && was.tiltS.length > 5) {
+    const pm = med(was.tiltS.map(x => x.pitch)), rm = med(was.tiltS.map(x => x.roll)), ap = Math.abs(pm), ar = Math.abs(rm);
+    d.res.staticRows.unshift(row('Camera level during recording', `${f1(ap)}° ${pm < 0 ? 'down' : 'up'} · roll ${f1(ar)}°`,
+      'Phone within 3° tilt and 2° roll keeps angles accurate', ap <= 3 && ar <= 2 ? 'ok' : (ap <= 6 && ar <= 4) ? 'warn' : 'bad'));
+  }
   closeCam(); rec = newRec(); renderReview();
 }
 

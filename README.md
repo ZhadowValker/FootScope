@@ -45,6 +45,22 @@ The report also has a **Foot Posture Index (FPI-6)** card for pronation / supina
 
 Photo-based angles are estimates and depend on landmark placement; reference ranges are approximate. X-ray remains the standard for hallux valgus.
 
+## Real-size scale and auto-suggested points
+
+- On the marking screen, open **Reference object** and pick A4 paper, a bank card, a 10 cm ruler or a custom length. Tap its two ends on the photo. Foot length, navicular height and heel-to-heel distance are then also reported in cm. The object must lie in the same plane as the foot (flat on the floor beside it); tilt or height differences make the scale wrong.
+- **Auto-suggest points** (toggle, off by default) separates the foot from the background by colour and suggests only points that can be read from the outline: heel and toe tip (and, with a reference object, the Achilles centre 10 cm above the floor in the heel photo). Suggestions are faded; joint points (ankle bone, navicular, big-toe joint) are never guessed. The report notes how many suggested points were kept. Works best on a plain floor or a sheet of white paper.
+
+## More tests (balance, sit-to-stand, stairs, running)
+
+Optional recordings from the home screen or the results screen, using the same framing check, countdown, voice and gallery-video option:
+
+- **Balance on one leg** (left and right, 15 s, front-facing): time held, side-to-side sway, sway speed, pelvic drop on the lifted side, trunk lean; left vs right comparison.
+- **Sit-to-stand (5 times)** (side view): stands counted, time for 5 stands against published reference values, rise time, slowing, knee extension, trunk lean.
+- **Stairs** (side view): direction, step rate, step-time symmetry, knee bend, trunk lean.
+- **Running** (side view, over-ground or treadmill): cadence, bounce, trunk lean, foot placement ahead of the hips, knee bend, foot strike, symmetry.
+
+These are screening measures from 2-D phone video; sway, bounce and running values have no validated cut-offs for this method, so they are shown for comparison (left vs right, before vs after) rather than as pass/fail.
+
 ## Notes
 
 - Screening aid only, not a diagnosis. 2-D pose estimation from a single phone camera has limits.

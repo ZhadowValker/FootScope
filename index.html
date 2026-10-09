@@ -169,6 +169,12 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
    <label class="chk"><input id="o-voice" type="checkbox" checked> Voice prompts (“Stand still”, “Walk”)</label>
   </div>
 
+  <div class="card">
+   <h3>More tests (optional)</h3>
+   <p class="small mute" style="margin-top:0">Balance on one leg, sit-to-stand, stairs and running. Each is recorded on its own and added to the report.</p>
+   <div class="grid-btn" id="home-tests"></div>
+  </div>
+
   <button class="btn" id="btn-start">Start assessment</button>
   <p class="small mute" style="text-align:center">Videos and measurements stay on this phone. Nothing is uploaded.</p>
   <p class="disc">FootScope is a screening aid based on 2-D camera pose estimation. It does not diagnose any condition. Results depend on camera position, lighting and clothing, and should be confirmed by clinical examination.</p>
@@ -253,6 +259,17 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
   <div class="small mute" id="mk-prog"></div>
   <h2 id="mk-title" style="margin-top:2px"></h2>
   <div class="card" style="padding:10px"><div class="mk-row"><div id="mk-guide"></div><div id="mk-ins"></div></div></div>
+  <div class="card" style="padding:10px">
+   <label class="chk" style="margin:0"><input id="mk-auto" type="checkbox"> Auto-suggest points from the foot outline</label>
+   <p class="small mute" style="margin:2px 0 6px">Faded points are suggestions (heel / toe tip only). Check each one.</p>
+   <details id="mk-refbox"><summary class="small" style="font-weight:600;color:var(--teal-d)">Reference object for real-size measurements</summary>
+   <label for="mk-ref" style="margin-top:10px">Reference object in the photo (real-size measurements)</label>
+   <select id="mk-ref"><option value="">None</option><option value="297">A4 paper — long edge (297 mm)</option><option value="210">A4 paper — short edge (210 mm)</option><option value="85.6">Bank card — long edge (85.6 mm)</option><option value="53.98">Bank card — short edge (54 mm)</option><option value="100">Ruler — 10 cm</option><option value="custom">Other length…</option></select>
+   <input id="mk-ref-mm" type="number" inputmode="decimal" min="10" max="1000" step="0.1" placeholder="Length in millimetres" style="display:none;margin-top:8px">
+   <button class="btn sec" id="mk-ref-btn" style="display:none;margin-top:8px"></button>
+   <p class="small mute" id="mk-ref-note" style="margin:6px 0 0;display:none">Lay the object flat on the floor beside the foot, in the same plane, and photograph from straight above or straight on. Tilt or a raised object makes the scale wrong.</p>
+   </details>
+  </div>
   <div class="mk-stage"><canvas id="mk-cv"></canvas><canvas id="mk-loupe" width="224" height="224"></canvas></div>
   <p class="small mute" style="margin:4px 0 8px">Tap the photo to place each point. Keep your finger down to see the magnifier and slide to the exact spot. Drag any point to adjust it.</p>
   <div class="grid-btn"><button class="btn sec" id="mk-undo">Undo point</button><button class="btn sec" id="mk-reset">Clear all</button></div>
@@ -268,8 +285,10 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
   <div class="card" id="r-pat"></div>
   <div class="card" id="r-obs"></div>
   <div id="r-views"></div>
+  <div id="r-tests"></div>
   <div id="r-foot"></div>
   <div id="r-fpi"></div>
+  <div class="card noprint" id="r-addtest"><h3>Add a test</h3><div class="grid-btn" id="r-testbtns"></div></div>
   <div class="signbox"><div>Examiner</div><div>Signature</div><div>Date</div></div>
   <p class="disc">Screening aid based on 2-D video pose estimation (MediaPipe). Not a diagnosis. Reference ranges are approximate; confirm findings with clinical examination and, where needed, imaging or gait-lab assessment.</p>
   <div class="noprint">
@@ -561,12 +580,202 @@ function analyzeFrames(key, frames, meta, H) {
   out.gaitRows = gaitRows(key, walk, meta, H);
   return out;
 }
+/* ---------- extra tests: balance, sit-to-stand, stairs, running ---------- */
+const TESTS = [
+  { key: 'balL', test: true, stance: 'L', name: 'Balance — standing on the LEFT leg', short: 'Balance L', orient: 'portrait', stand: 3, walk: 15,
+    readyText: 'Stand still', walkText: 'Balance on the left leg', diag: 'patient faces the phone',
+    what: 'One-leg stance, eyes open, up to 15 s. Measures how long the position is held, how much the body sways and whether the pelvis drops.',
+    steps: ['<b>Place the phone upright</b> at hip height, about <b>2.5 m in front of the patient</b>. The whole body must be in view.',
+      '<b>Patient stands barefoot facing the phone</b>, hands on hips, eyes open, looking at the phone.',
+      '<b>Stand next to a wall or sturdy chair</b> (not touching it) for safety. Stop at once if the patient feels unsteady.',
+      '<b>Get ready:</b> stand on both feet for 3 seconds.',
+      '<b>When you hear “Balance on the left leg”</b>, lift the RIGHT foot (knee bent about 90°) and hold as long as possible, up to 15 s. Do not let the lifted foot touch the standing leg.'] },
+  { key: 'balR', test: true, stance: 'R', name: 'Balance — standing on the RIGHT leg', short: 'Balance R', orient: 'portrait', stand: 3, walk: 15,
+    readyText: 'Stand still', walkText: 'Balance on the right leg', diag: 'patient faces the phone',
+    what: 'One-leg stance, eyes open, up to 15 s. Measures how long the position is held, how much the body sways and whether the pelvis drops.',
+    steps: ['<b>Place the phone upright</b> at hip height, about <b>2.5 m in front of the patient</b>. The whole body must be in view.',
+      '<b>Patient stands barefoot facing the phone</b>, hands on hips, eyes open, looking at the phone.',
+      '<b>Stand next to a wall or sturdy chair</b> (not touching it) for safety. Stop at once if the patient feels unsteady.',
+      '<b>Get ready:</b> stand on both feet for 3 seconds.',
+      '<b>When you hear “Balance on the right leg”</b>, lift the LEFT foot (knee bent about 90°) and hold as long as possible, up to 15 s. Do not let the lifted foot touch the standing leg.'] },
+  { key: 'sts', test: true, name: 'Sit-to-stand (5 times)', short: 'Sit-to-stand', orient: 'landscape', stand: 3, walk: 25,
+    readyText: 'Sit still', walkText: 'Stand up and sit down five times', diag: 'patient sits side-on',
+    what: 'Five-times sit-to-stand. Measures the time for five stands, the number of stands and the knee and trunk position.',
+    steps: ['<b>Turn the phone sideways</b> (landscape), hip height, about <b>3 m to the side of the chair</b>. The whole body and the chair must be in view.',
+      '<b>Use a standard chair</b> (seat about 43–46 cm high) with its back against a wall. Patient sits with the back against the chair, feet flat, <b>arms crossed on the chest</b>.',
+      '<b>Get ready:</b> sit still for 3 seconds.',
+      '<b>When you hear “Stand up and sit down five times”</b>, stand fully upright and sit back down five times, as fast as is safe, without using the hands. Tap stop when finished.'] },
+  { key: 'stairs', test: true, name: 'Stair climb', short: 'Stairs', orient: 'landscape', stand: 2, walk: 12,
+    readyText: 'Stand still', walkText: 'Climb the stairs', diag: 'phone sideways, facing the stairs',
+    what: 'Stair climb at a natural pace. Measures cadence, left-right symmetry, knee bend and trunk lean.',
+    steps: ['<b>Turn the phone sideways</b> (landscape), hip height, about <b>3 m from the side of the staircase</b>. Four to six steps and the whole body must stay in view.',
+      '<b>Keep a handrail within reach.</b> Record one direction only — all going up, or all going down.',
+      '<b>Get ready:</b> stand at the foot of the stairs for 2 seconds.',
+      '<b>When you hear “Climb the stairs”</b>, walk up at a natural pace, alternating feet.'] },
+  { key: 'run', test: true, name: 'Running', short: 'Running', orient: 'landscape', stand: 2, walk: 12,
+    readyText: 'Stand still', walkText: 'Run at an easy pace', diag: 'runs across the screen',
+    what: 'Easy-pace running past the phone or on a treadmill. Measures cadence, bounce, trunk lean, foot strike and symmetry.',
+    steps: ['<b>Turn the phone sideways</b> (landscape) on a stable support, hip height, <b>4–5 m from the running line</b>. Running line about 4–6 m long.',
+      '<b>Treadmill:</b> place the phone to the side of the belt so the whole body stays in view. Use a comfortable steady speed.',
+      '<b>Get ready:</b> stand at the start for 2 seconds.',
+      '<b>When you hear “Run at an easy pace”</b>, run past the phone at a steady pace. Slow down after leaving the frame.'] }
+];
+const standOf = v => v.stand != null ? v.stand : STAND;
+const sgn = x => x > 0 ? 1 : x < 0 ? -1 : 0;
+const torsoOf = f => len(sub(mid(P(f, 11), P(f, 12)), mid(P(f, 23), P(f, 24))));
+/* heel-strike style events from ankle separation in a side view; direction = which way the feet point */
+function sideEvents(fr, minGap) {
+  const t = fr.map(f => f.t), torso = fr.map(torsoOf);
+  const sep = smooth(fr.map((f, i) => Math.abs(P(f, 27)[0] - P(f, 28)[0]) / torso[i]), 1), p95 = pct(sep, 0.95);
+  const dd = []; for (const f of fr) { if (f.p[31 * 3 + 2] > 0.3 && f.p[29 * 3 + 2] > 0.3) dd.push(P(f, 31)[0] - P(f, 29)[0]); if (f.p[32 * 3 + 2] > 0.3 && f.p[30 * 3 + 2] > 0.3) dd.push(P(f, 32)[0] - P(f, 30)[0]); }
+  let dirX = dd.length ? sgn(med(dd)) : 0;
+  if (!dirX) { const hx = fr.map(f => mid(P(f, 23), P(f, 24))[0]), k = Math.max(3, Math.floor(fr.length * 0.2)); dirX = mean(hx.slice(-k)) >= mean(hx.slice(0, k)) ? 1 : -1; }
+  const ev = [];
+  if (p95 >= 0.4) {
+    const raw = findPeaks(sep, t, minGap, 0.5 * p95).map(i => ({ i, t: t[i], foot: (P(fr[i], 27)[0] - P(fr[i], 28)[0]) * dirX > 0 ? 'L' : 'R' }));
+    for (const e of raw) { const l = ev[ev.length - 1]; if (l && l.foot === e.foot) { if (sep[e.i] > sep[l.i]) ev[ev.length - 1] = e; } else ev.push(e); }
+  }
+  return { ev, t, torso, sep, dirX };
+}
+const flexOf = (f, s) => { const [h, k, a] = s === 'L' ? [23, 25, 27] : [24, 26, 28]; return angleBetween(sub(P(f, k), P(f, h)), sub(P(f, a), P(f, k))); };
+const leanSide = f => { const hm = mid(P(f, 23), P(f, 24)), sm = mid(P(f, 11), P(f, 12)); return atan2d(Math.abs(sm[0] - hm[0]), hm[1] - sm[1]); };
+const atan2d = (y, x) => Math.atan2(y, x) / rad;
+const NOT_ENOUGH = (what) => [row(what, 'Not enough clear frames', 'Keep the whole body in view for the whole test and retake', 'warn')];
+
+function balanceRows(stance, act, meta, H) {
+  const fr = act.filter(f => okFrame(f, [11, 12, 23, 24, 27, 28], meta, 0.4));
+  if (fr.length < 15) return { rows: NOT_ENOUGH('Balance'), vals: {} };
+  const tm = med(fr.map(torsoOf)), win = fr[fr.length - 1].t - fr[0].t + (fr.length > 1 ? (fr[fr.length - 1].t - fr[0].t) / (fr.length - 1) : 0);
+  const stA = stance === 'L' ? 27 : 28, lfA = stance === 'L' ? 28 : 27;
+  const up = fr.map(f => (P(f, stA)[1] - P(f, lfA)[1]) > 0.15 * tm);
+  let i0 = -1;
+  for (let i = 0; i < fr.length; i++) { if (!up[i]) continue; let j = i; while (j < fr.length && up[j]) j++; if (fr[j - 1].t - fr[i].t >= 0.4 || j >= fr.length) { i0 = i; break; } i = j; }
+  if (i0 < 0) return { rows: [row('Balance', 'Foot lift not detected', 'The other foot must be lifted clearly off the floor, with the whole body in view', 'warn')], vals: {} };
+  let i1 = fr.length - 1;
+  for (let i = i0; i < fr.length; i++) { if (up[i]) continue; let j = i; while (j < fr.length && !up[j]) j++; if (j >= fr.length || fr[j - 1].t - fr[i].t >= 0.4) { i1 = i - 1; break; } i = j; }
+  const hold = fr[i1].t - fr[i0].t, seg = fr.slice(i0, i1 + 1), R = [], vals = { hold, win };
+  R.push(row('Time held on one leg', `${f1(hold)} s of ${f1(win)} s`, 'Under 5 s is linked with higher fall risk in older adults · holding the whole test is expected for most adults',
+    hold >= 0.9 * win ? 'ok' : hold >= 5 ? 'warn' : 'bad'));
+  if (seg.length >= 10 && hold >= 1.5) {
+    const cm = H ? 0.30 * H / tm : null, unit = cm ? 'cm' : '% of trunk', k = cm || 100 / tm;
+    const hx = smooth(seg.map(f => mid(P(f, 23), P(f, 24))[0]), 1), hy = smooth(seg.map(f => mid(P(f, 23), P(f, 24))[1]), 1);
+    const rg = (pct(hx, 0.95) - pct(hx, 0.05)) * k;
+    let path = 0; for (let i = 1; i < seg.length; i++) path += Math.hypot(hx[i] - hx[i - 1], hy[i] - hy[i - 1]);
+    const speed = path * k / (seg[seg.length - 1].t - seg[0].t);
+    vals.sway = rg; vals.speed = speed;
+    R.push(row('Side-to-side sway (hip centre)', `${f1(rg)} ${unit}`, 'Range of the hips while balancing · no validated limits for phone video — compare left with right'));
+    R.push(row('Sway speed', `${f1(speed)} ${unit}/s`, 'Path length ÷ time · lower = steadier'));
+    const tilt = seg.map(f => tiltDeg(P(f, 23), P(f, 24))), drop = med(tilt.map(x => stance === 'L' ? -x : x));
+    R.push(row('Pelvic drop on the lifted side', `${drop >= 0 ? f1(drop) + '° drop' : f1(-drop) + '° rise'}`, 'Lifted side should stay level or rise · a drop over 5° can suggest weak hip abductors (Trendelenburg sign) · approximate',
+      drop <= 3 ? 'ok' : drop <= 6 ? 'warn' : 'bad'));
+    const hipS = stance === 'L' ? 23 : 24, hipO = stance === 'L' ? 24 : 23, d = sgn(med(seg.map(f => P(f, hipS)[0] - P(f, hipO)[0])));
+    const lean = med(seg.map(f => { const hm = mid(P(f, 23), P(f, 24)), sm = mid(P(f, 11), P(f, 12)); return atan2d((sm[0] - hm[0]) * d, hm[1] - sm[1]); }));
+    vals.lean = lean;
+    R.push(row('Trunk lean over the standing leg', `${f1(Math.abs(lean))}° ${lean >= 0 ? 'toward' : 'away from'} the standing leg`, 'Within 5° is typical · a clear lean toward the standing side can be a compensation for weak hip abductors',
+      Math.abs(lean) <= 5 ? 'ok' : Math.abs(lean) <= 10 ? 'warn' : 'bad'));
+  }
+  return { rows: R, vals };
+}
+function stsRows(act, meta, H, age) {
+  const fr = act.filter(f => okFrame(f, [11, 12, 23, 24, 25, 26, 27, 28], meta, 0.3));
+  if (fr.length < 20) return { rows: NOT_ENOUGH('Sit-to-stand'), vals: {} };
+  const tm = med(fr.map(torsoOf)), t = fr.map(f => f.t), y = smooth(fr.map(f => mid(P(f, 23), P(f, 24))[1] / tm), 2);
+  const lo = pct(y, 0.08), hi = pct(y, 0.92), amp = hi - lo;
+  if (amp < 0.45) return { rows: [row('Sit-to-stand', 'No sit-to-stand movement found', 'The hips must rise at least half a trunk length. Film from the side and retake', 'warn')], vals: {} };
+  const up = lo + 0.25 * amp, dn = lo + 0.75 * amp, stands = [];
+  let state = y[0] > (lo + hi) / 2 ? 'sit' : 'stand', depart = y[0] > (lo + hi) / 2 ? t[0] : null, rise = null;
+  for (let i = 0; i < y.length; i++) {
+    if (state === 'sit') { if (y[i] > dn) depart = t[i]; if (y[i] < up) { stands.push({ t: t[i], dur: t[i] - (depart != null ? depart : t[i]), i }); state = 'stand'; } }
+    else if (y[i] > dn) { state = 'sit'; depart = t[i]; }
+  }
+  const n = stands.length, R = [], vals = { n };
+  if (!n) return { rows: [row('Sit-to-stand', 'No complete stand-up found', 'Stand fully upright each time and retake', 'warn')], vals };
+  R.push(row('Stand-ups counted', `${n}`, 'Five are needed for the standard test', n >= 5 ? 'ok' : 'warn'));
+  const first = stands[0], t0 = first.t - first.dur, use = Math.min(n, 5), tEnd = stands[use - 1].t, total = tEnd - t0; vals.total = total;
+  R.push(row(n >= 5 ? 'Time for 5 stands' : `Time for ${use} stand${use > 1 ? 's' : ''}`, `${f1(total)} s`,
+    'Mean 11.4 s at 60–69 y, 12.6 s at 70–79 y, 14.8 s at 80–89 y (Bohannon 2006) · over 15 s is linked with falls (Buatois 2008) · timing from video is ±0.3 s',
+    n < 5 ? 'warn' : total <= 12 ? 'ok' : total <= 15 ? 'warn' : 'bad'));
+  const dur = stands.slice(0, use).map(s => s.dur).filter(d => d > 0.2); if (dur.length) { R.push(row('Average time to rise', `${f1(mean(dur))} s`, 'From leaving the seat to upright')); if (dur.length >= 3) { const sl = dur.slice(-2).reduce((a, b) => a + b, 0) / 2, fi = dur.slice(0, 2).reduce((a, b) => a + b, 0) / 2; R.push(row('Slowing across repetitions', `${f1((sl / fi - 1) * 100)} %`, 'Last two stands vs first two · a large slowing suggests fatigue', sl / fi < 1.25 ? 'ok' : 'warn')); } }
+  const top = fr.filter((f, i) => y[i] < up), kn = med(top.flatMap(f => ['L', 'R'].filter(s => f.p[(s === 'L' ? 25 : 26) * 3 + 2] > 0.3).map(s => flexOf(f, s))));
+  if (isFinite(kn)) R.push(row('Knee at the top of the stand', `${f1(kn)}° from straight`, 'Fully upright knees ≈ 0–10° · side-view estimate', kn <= 10 ? 'ok' : kn <= 20 ? 'warn' : 'bad'));
+  const lean = pct(fr.filter((f, i) => y[i] > up && y[i] < dn).map(leanSide), 0.9);
+  if (isFinite(lean)) R.push(row('Forward trunk lean while rising', `${lean.toFixed(0)}°`, 'Peak lean from vertical during the rise · indicative'));
+  return { rows: R, vals };
+}
+function stairsRows(act, meta, H) {
+  const fr = act.filter(f => okFrame(f, [11, 12, 23, 24, 25, 26, 27, 28], meta, 0.3));
+  if (fr.length < 20) return { rows: NOT_ENOUGH('Stairs'), vals: {} };
+  const { ev, t, torso, dirX } = sideEvents(fr, 0.3), R = [], vals = {};
+  const hy = fr.map(f => mid(P(f, 23), P(f, 24))[1]), k = Math.max(3, Math.floor(fr.length * 0.2)), dy = mean(hy.slice(-k)) - mean(hy.slice(0, k)), dxm = Math.abs(mean(fr.slice(-k).map(f => mid(P(f, 23), P(f, 24))[0])) - mean(fr.slice(0, k).map(f => mid(P(f, 23), P(f, 24))[0])));
+  if (Math.abs(dy) > 0.6 * tm0(torso)) R.push(row('Direction', dy < 0 ? 'Going up' : 'Going down', 'From the movement of the hips'));
+  if (ev.length < 3) return { rows: R.concat([row('Stairs', 'No clear steps detected', 'Climb at a natural pace with the whole body in view, and retake', 'warn')]), vals };
+  R.push(row('Steps detected', `${ev.length}`, '4 or more gives a reliable reading', ev.length >= 4 ? 'ok' : 'warn'));
+  const cad = (ev.length - 1) / (ev[ev.length - 1].t - ev[0].t) * 60; vals.cad = cad;
+  R.push(row('Step rate', `${cad.toFixed(0)} steps/min`, 'Natural stair climbing is often ≈ 80–110 steps/min · slower rates can reflect pain, weakness or caution'));
+  const st = { L: [], R: [] }; for (let j = 1; j < ev.length; j++) { const dt = ev[j].t - ev[j - 1].t; if (dt > 0.25 && dt < 2) st[ev[j].foot].push(dt); }
+  const s1 = symRow('Step-time symmetry', symIdx(st.L, st.R)); if (s1) R.push(s1);
+  const fl = { L: [], R: [] }; for (const f of fr) for (const s of ['L', 'R']) fl[s].push(flexOf(f, s));
+  const pk = {}; for (const s of ['L', 'R']) { pk[s] = pct(fl[s], 0.95); R.push(row(`${s === 'L' ? 'Left' : 'Right'} knee peak bend`, `${pk[s].toFixed(0)}°`, 'Stair climbing needs about 80–100° of knee bend · side-view estimate, the leg nearer the phone is more reliable', pk[s] >= 70 ? 'ok' : pk[s] >= 55 ? 'warn' : 'bad')); }
+  const s2 = symRow('Knee-bend symmetry', symIdx([pk.L], [pk.R])); if (s2) R.push(s2);
+  const lean = med(fr.map(f => { const hm = mid(P(f, 23), P(f, 24)), sm = mid(P(f, 11), P(f, 12)); return atan2d((sm[0] - hm[0]) * dirX, hm[1] - sm[1]); }));
+  R.push(row('Forward trunk lean', `${lean.toFixed(0)}°`, 'Median lean from vertical toward the direction of travel · indicative'));
+  return { rows: R, vals };
+}
+const tm0 = a => med(a);
+function runRows(act, meta, H) {
+  const fr = act.filter(f => okFrame(f, [11, 12, 23, 24, 25, 26, 27, 28], meta, 0.3));
+  if (fr.length < 25) return { rows: NOT_ENOUGH('Running'), vals: {} };
+  const { ev, t, torso, dirX } = sideEvents(fr, 0.18), R = [], vals = {}, cmpp = H ? 0.30 * H / med(torso) : null;
+  if (ev.length < 5) return { rows: [row('Running', 'No clear strides detected', 'Run at a steady pace with the whole body in view (side-on) and retake', 'warn')], vals };
+  const cad = (ev.length - 1) / (ev[ev.length - 1].t - ev[0].t) * 60; vals.cad = cad;
+  R.push(row('Steps detected', `${ev.length}`, '8 or more gives a reliable reading', ev.length >= 8 ? 'ok' : 'warn'));
+  R.push(row('Cadence', `${cad.toFixed(0)} steps/min`, 'Many recreational runners run at ≈ 160–180 steps/min · lower cadence usually means longer steps and more braking · indicative'));
+  const st = { L: [], R: [] }; for (let j = 1; j < ev.length; j++) { const dt = ev[j].t - ev[j - 1].t; if (dt > 0.2 && dt < 1.2) st[ev[j].foot].push(dt); }
+  const s1 = symRow('Step-time symmetry', symIdx(st.L, st.R)); if (s1) R.push(s1);
+  const seg = fr.filter(f => f.t >= ev[0].t && f.t <= ev[ev.length - 1].t), hyv = detrend(seg.map(f => f.t), seg.map(f => mid(P(f, 23), P(f, 24))[1]));
+  const bounce = pct(hyv, 0.95) - pct(hyv, 0.05); vals.bounce = bounce;
+  R.push(row('Vertical bounce (hip centre)', cmpp ? `${f1(bounce * cmpp)} cm` : `${f1(bounce / med(torso) * 100)} % of trunk`, 'Typical ≈ 6–10 cm at an easy pace · less bounce = less wasted energy · indicative'));
+  const lean = med(fr.map(f => { const hm = mid(P(f, 23), P(f, 24)), sm = mid(P(f, 11), P(f, 12)); return atan2d((sm[0] - hm[0]) * dirX, hm[1] - sm[1]); }));
+  R.push(row('Forward trunk lean', `${lean.toFixed(0)}°`, 'Slight forward lean (≈ 5–10°) is typical · median lean from vertical'));
+  const reach = ev.map(e => { const f = fr[e.i], a = P(f, e.foot === 'L' ? 27 : 28), hm = mid(P(f, 23), P(f, 24)); return (a[0] - hm[0]) * dirX / torso[e.i]; });
+  const rr = med(reach); vals.reach = rr;
+  R.push(row('Foot placed ahead of the hips', cmpp ? `${f1(rr * med(torso) * cmpp)} cm` : `${f1(rr * 100)} % of trunk`, 'Ankle distance in front of the hip centre at the end of the swing · larger = reaching further ahead of the body (overstride) · indicative'));
+  const pk = {}; for (const s of ['L', 'R']) { const a = fr.map(f => flexOf(f, s)); pk[s] = pct(a, 0.95); R.push(row(`${s === 'L' ? 'Left' : 'Right'} knee peak bend (swing)`, `${pk[s].toFixed(0)}°`, 'Swing-phase peak bend is often ≈ 90–130° when running · side-view estimate')); }
+  const s2 = symRow('Knee-bend symmetry', symIdx([pk.L], [pk.R])); if (s2) R.push(s2);
+  const fs = { L: [], R: [] };
+  for (const e of ev) {
+    const [he, to] = e.foot === 'L' ? [29, 31] : [30, 32], ps = [];
+    for (let q = e.i; q <= Math.min(fr.length - 1, e.i + 2); q++) { const h = P(fr[q], he), tt = P(fr[q], to); ps.push(Math.atan2(h[1] - tt[1], Math.abs(h[0] - tt[0]) || 1e-6) / rad); }
+    const pm = med(ps); fs[e.foot].push(pm > 10 ? 'Heel' : pm < -5 ? 'Forefoot' : 'Midfoot');
+  }
+  for (const s of ['L', 'R']) if (fs[s].length) { const cnt = {}; fs[s].forEach(x => cnt[x] = (cnt[x] || 0) + 1); const tp = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]; R.push(row(`${s === 'L' ? 'Left' : 'Right'} foot strike`, `${tp[0]} (${tp[1]}/${fs[s].length})`, 'Most common contact pattern · indicative at phone frame rates')); }
+  return { rows: R, vals };
+}
+function analyzeTest(key, frames, meta, H, age) {
+  const act = frames.filter(f => f.ph === 'walk'), T = TESTS.find(x => x.key === key);
+  let r;
+  try {
+    r = key === 'balL' || key === 'balR' ? balanceRows(T.stance, act, meta, H) : key === 'sts' ? stsRows(act, meta, H, age) : key === 'stairs' ? stairsRows(act, meta, H) : runRows(act, meta, H);
+  } catch (e) { console.warn(e); r = { rows: [row('Analysis', 'Could not be calculated', 'Retake with the whole body in view', 'warn')], vals: {} }; }
+  return { m: null, staticRows: r.rows, gaitRows: [], vals: r.vals };
+}
+function balanceCompare() {
+  const a = S.data.balL, b = S.data.balR;
+  if (!a || !b || a.res.vals.hold == null || b.res.vals.hold == null) return '';
+  const L = a.res.vals, Rr = b.res.vals, rows = [row('Time held (left / right)', `${f1(L.hold)} s / ${f1(Rr.hold)} s`, 'Compare the two sides')];
+  const s1 = symRow('Hold-time difference', symIdx([L.hold], [Rr.hold])); if (s1) rows.push(s1);
+  if (L.sway != null && Rr.sway != null) rows.push(row('Sway range (left / right)', `${f1(L.sway)} / ${f1(Rr.sway)}`, 'Same units as above · the larger value is the less steady side'));
+  return `<div class="card"><h2 style="margin-top:0">Balance — left vs right</h2>${rows.map(rowHtml).join('')}</div>`;
+}
+
 /* ---------- foot close-ups (points are normalised 0..1 on the photo) ---------- */
 const crossv = (a, b) => a[0] * b[1] - a[1] * b[0];
-function footRear(pts, w, h) {
+const mmTxt = mm => `${(mm / 10).toFixed(1)} cm`;
+const SCALE_REF = 'Scaled from the reference object · valid only for structures in the same plane as the object';
+function footRear(pts, w, h, sc) {
   const P = i => [pts[i].x * w, pts[i].y * h], rows = [], vals = {};
   for (const [s, o] of [['L', 0], ['R', 3]]) {
-    if (!pts[o + 2]) continue;
+    if (!(pts[o] && pts[o + 1] && pts[o + 2])) continue;
     const up = norm(sub(P(o), P(o + 2))), uLeft = [up[1], -up[0]];       // photo taken from behind
     const v = frontalDev(P(o), P(o + 1), P(o + 2), s === 'L' ? uLeft : [-uLeft[0], -uLeft[1]]);
     vals[s] = v;
@@ -574,30 +783,36 @@ function footRear(pts, w, h) {
     r.ref = 'Normal ≈ −2° to 6° valgus · Achilles line vs heel line';
     rows.push(r);
   }
+  if (sc && pts[2] && pts[5]) {
+    const d = len(sub(P(2), P(5))) * sc; vals.heelGapMm = d;
+    rows.push(row('Heel-to-heel distance (floor)', mmTxt(d), SCALE_REF));
+  }
   return { rows, vals };
 }
-function footMedial(pts, w, h, s) {
-  if (pts.length < 5) return { rows: [], vals: {} };
+function footMedial(pts, w, h, s, sc) {
+  if (!pts.slice(0, 5).every(Boolean)) return { rows: [], vals: {} };
   const P = i => [pts[i].x * w, pts[i].y * h];
   const heel = P(0), toe = P(1), mal = P(2), nav = P(3), mt = P(4);
   const mlaa = angleBetween(sub(mal, nav), sub(mt, nav));
   const FL = len(sub(toe, heel)) || 1, NH = Math.abs(crossv(norm(sub(toe, heel)), sub(nav, heel)));
   const ratio = NH / FL, name = s === 'L' ? 'Left' : 'Right';
   const mtxt = mlaa > 150 ? 'low arch tendency' : mlaa < 130 ? 'high arch tendency' : 'normal arch';
-  return { vals: { mlaa, ratio }, rows: [
+  const mmRows = sc ? [row(`${name} foot length (heel → big toe)`, mmTxt(FL * sc), SCALE_REF), row(`${name} navicular height`, mmTxt(NH * sc), SCALE_REF)] : [];
+  return { vals: { mlaa, ratio, flMm: sc ? FL * sc : null, nhMm: sc ? NH * sc : null }, rows: [
     row(`${name} medial arch angle (MLAA)`, `${mlaa.toFixed(0)}° · ${mtxt}`, 'Normal ≈ 130–150° · higher = flatter, lower = higher arch · approximate',
       (mlaa >= 130 && mlaa <= 150) ? 'ok' : (mlaa >= 120 && mlaa < 160) ? 'warn' : 'bad'),
     row(`${name} navicular height ÷ foot length`, ratio.toFixed(2), 'Typical ≈ 0.13–0.20 · lower = flatter · approximate',
-      (ratio >= 0.13 && ratio <= 0.20) ? 'ok' : (ratio >= 0.10 && ratio <= 0.23) ? 'warn' : 'bad')] };
+      (ratio >= 0.13 && ratio <= 0.20) ? 'ok' : (ratio >= 0.10 && ratio <= 0.23) ? 'warn' : 'bad'), ...mmRows] };
 }
-function footTop(pts, w, h) {
+function footTop(pts, w, h, sc) {
   const P = i => [pts[i].x * w, pts[i].y * h], rows = [], vals = {}, vec = {};
   for (const [s, o] of [['L', 0], ['R', 5]]) {
-    if (!pts[o + 4]) continue;
+    if (![0, 1, 2, 3, 4].every(q => pts[o + q])) continue;
     const v = norm(sub(P(o + 1), P(o))); vec[s] = v;
     const uL = [v[1], -v[0]], lat = s === 'L' ? uL : [-uL[0], -uL[1]];   // person's left when viewed from above
     const hva = frontalDev(P(o + 2), P(o + 3), P(o + 4), lat), name = s === 'L' ? 'Left' : 'Right';
     vals[s] = { hva };
+    if (sc) { const fl = len(sub(P(o + 1), P(o))) * sc; vals[s].flMm = fl; rows.push(row(`${name} foot length (heel → 2nd toe)`, mmTxt(fl), SCALE_REF)); }
     const cls = hva < 15 ? 'normal' : hva < 20 ? 'mild' : hva <= 40 ? 'moderate' : 'severe';
     rows.push(row(`${name} big-toe angle (hallux valgus)`, hva < -3 ? `${f1(-hva)}° hallux varus` : `${f1(Math.max(hva, 0))}° · ${cls}`,
       'Normal < 15° · mild 15–20° · moderate 20–40° · severe > 40° · photo estimate (X-ray is the standard)',
@@ -638,6 +853,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+const curView = () => S.test || VIEWS[S.idx];
 const VIEWS = [
   { key: 'front', name: 'Front view', short: 'Front', orient: 'portrait', walk: 8,
     walkText: 'Walk toward the phone',
@@ -665,7 +881,7 @@ const VIEWS = [
       '<b>When you hear “Walk”</b>, walk straight away from the phone at a natural pace.'] }
 ];
 
-const S = { patient: {}, idx: 0, delay: 5, voice: true, facing: 'environment', data: {}, liveAng: true, foot: {}, fpi: { L: Array(6).fill(null), R: Array(6).fill(null) } };
+const S = { patient: {}, idx: 0, test: null, back: 'home', autoOn: false, delay: 5, voice: true, facing: 'environment', data: {}, liveAng: true, foot: {}, fpi: { L: Array(6).fill(null), R: Array(6).fill(null) } };
 let pose = null, poseErr = 0, poseP = null;
 let stream = null, camOn = false, wake = null, lastTs = 0, lastStatusT = 0;
 let rec = newRec();
@@ -677,6 +893,7 @@ function newRec() { return { state: 'idle', frames: [], attempts: 0, hits: 0, ch
 function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id)); window.scrollTo(0, 0); }
 let toastT; function toast(m, ms = 4000) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => t.style.display = 'none', ms); }
 function stepsBar(el, cur) {
+  if (S.test) { el.innerHTML = ''; return; }
   el.innerHTML = VIEWS.map((v, i) => `<div class="${i === cur ? 'cur' : (i < cur || S.data[v.key]) ? 'done' : ''}">${i + 1}. ${v.short}</div>`).join('');
 }
 function say(t) { if (!S.voice || !('speechSynthesis' in window)) return; try { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(t)); } catch (e) {} }
@@ -728,9 +945,9 @@ function updateHeightUi() {
 ['#p-unit', '#p-ft', '#p-in', '#p-height'].forEach(s => $(s).addEventListener('input', updateHeightUi));
 updateHeightUi();
 
-$('#btn-start').onclick = async () => {
+async function prepare() {
   const hh = readHeight(), h = hh.cm;
-  if (hh.raw && (isNaN(h) || h < 80 || h > 230)) { toast('Please enter a valid height (about 2 ft 8 in to 7 ft 6 in, or 80–230 cm).'); return; }
+  if (hh.raw && (isNaN(h) || h < 80 || h > 230)) { toast('Please enter a valid height (about 2 ft 8 in to 7 ft 6 in, or 80–230 cm).'); return false; }
   S.patient = { name: $('#p-name').value.trim(), age: $('#p-age').value.trim(), height: h ? Math.round(h * 10) / 10 : null };
   S.facing = $('#o-cam').value; S.voice = $('#o-voice').checked;
   try { localStorage.setItem('footscope-prefs', JSON.stringify({ facing: S.facing, voice: S.voice })); } catch (e) {}
@@ -740,9 +957,27 @@ $('#btn-start').onclick = async () => {
     $('#loader').style.display = 'none';
     if (!pose) toast('Analysis engine could not load (check internet). You can still record, but no measurements will be calculated.', 7000);
   }
-  S.idx = 0; S.data = {}; S.foot = {}; S.fpi = { L: Array(6).fill(null), R: Array(6).fill(null) };
+  return true;
+}
+$('#btn-start').onclick = async () => {
+  if (!await prepare()) return;
+  for (const v of VIEWS) if (S.data[v.key] && S.data[v.key].url) URL.revokeObjectURL(S.data[v.key].url);
+  for (const v of VIEWS) delete S.data[v.key];
+  S.test = null; S.idx = 0; S.foot = {}; S.fpi = { L: Array(6).fill(null), R: Array(6).fill(null) };
   renderBrief(); show('brief');
 };
+async function startTest(key, from) {
+  if (from === 'home' && !await prepare()) return;
+  if (S.data[key] && S.data[key].url) URL.revokeObjectURL(S.data[key].url);
+  delete S.data[key];
+  S.test = TESTS.find(t => t.key === key); S.back = from;
+  renderBrief(); show('brief');
+}
+function testButtons(el, from) {
+  el.innerHTML = TESTS.map(t => `<button class="btn sec" data-t="${t.key}">${esc(t.short)}${S.data[t.key] ? ' ✓' : ''}</button>`).join('');
+  el.querySelectorAll('button').forEach(b => b.onclick = () => startTest(b.dataset.t, from));
+}
+testButtons($('#home-tests'), 'home');
 
 /* ---------- brief ---------- */
 function diagram(key) {
@@ -764,17 +999,24 @@ function diagram(key) {
     lbl(172, 76, 'walk away', 'start') + dim(34, 130, 190, '≈ 2.5 m') + lbl(160, 24, 'back toward the phone');
   return `<svg viewBox="0 0 320 220" role="img" aria-label="Positioning diagram">${defs}${room}${b}</svg>`;
 }
+function testDiagram(v) {
+  return `<svg viewBox="0 0 320 220" role="img" aria-label="Positioning diagram"><rect x="4" y="4" width="312" height="212" rx="14" fill="#f1f5f9" stroke="#cbd5e1"/>
+  <polygon points="160,176 70,40 250,40" fill="#0f766e" opacity=".10"/><rect x="145" y="176" width="30" height="18" rx="4" fill="#0f766e"/><circle cx="160" cy="185" r="3.5" fill="#fff"/>
+  <circle cx="160" cy="68" r="13" fill="#1e293b"/><rect x="150" y="84" width="20" height="54" rx="8" fill="#f59e0b"/>
+  <text x="160" y="26" text-anchor="middle" font-size="12" font-weight="600" fill="#0f172a">${esc(v.diag)}</text>
+  <text x="160" y="212" text-anchor="middle" font-size="11" fill="#475569">${v.orient === 'portrait' ? 'phone upright' : 'phone sideways'}</text></svg>`;
+}
 function renderBrief() {
-  const v = VIEWS[S.idx];
+  const v = curView();
   stepsBar($('#b-steps'), S.idx);
-  $('#b-title').textContent = `View ${S.idx + 1} of 3 — ${v.name}`;
+  $('#b-title').textContent = v.test ? `Test — ${v.name}` : `View ${S.idx + 1} of 3 — ${v.name}`;
   $('#b-orient').textContent = v.orient === 'portrait' ? '📱 Hold / place the phone UPRIGHT (portrait)' : '📱 Turn the phone SIDEWAYS (landscape)';
-  $('#b-diagram').innerHTML = diagram(v.key);
+  $('#b-diagram').innerHTML = v.test ? testDiagram(v) : diagram(v.key);
   $('#b-list').innerHTML = v.steps.map(s => `<li>${s}</li>`).join('');
-  $('#b-time').innerHTML = `<div><b>✓</b>Frame check</div><div><b>5-4-3-2-1</b>Ready</div><div><b>${STAND}s</b>Stand still</div><div><b>${v.walk}s</b>Walk</div>`;
+  $('#b-time').innerHTML = `<div><b>✓</b>Frame check</div><div><b>5-4-3-2-1</b>Ready</div><div><b>${standOf(v)}s</b>${v.test ? 'Get ready' : 'Stand still'}</div><div><b>${v.walk}s</b>${v.test ? 'Test' : 'Walk'}</div>`;
 }
 $('#btn-open').onclick = openCam;
-$('#btn-brief-back').onclick = () => { if (S.idx > 0) { S.idx--; renderBrief(); } else show('home'); };
+$('#btn-brief-back').onclick = () => { if (S.test) { S.test = null; if (S.back === 'results') renderResults(); else show('home'); } else if (S.idx > 0) { S.idx--; renderBrief(); } else show('home'); };
 
 /* ---------- camera ---------- */
 async function openCam() {
@@ -860,7 +1102,7 @@ function draw(lm, v) {
   for (const [a, b] of CONN) { if (lm[a].visibility < 0.4 || lm[b].visibility < 0.4) continue; g.beginPath(); g.moveTo(X(lm[a].x), Y(lm[a].y)); g.lineTo(X(lm[b].x), Y(lm[b].y)); g.stroke(); }
   g.fillStyle = '#fff';
   for (const i of KEYPTS) { if (lm[i].visibility < 0.4) continue; g.beginPath(); g.arc(X(lm[i].x), Y(lm[i].y), 4 * d, 0, 7); g.fill(); }
-  if (S.liveAng) drawAngles(g, lm, v, X, Y, d);
+  if (S.liveAng && !S.test) drawAngles(g, lm, v, X, Y, d);
 }
 
 /* ---------- live angles overlay ---------- */
@@ -875,7 +1117,7 @@ function tag(g, text, x, y, col, d) {
   g.fill(); g.fillStyle = col; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y + d);
 }
 function drawAngles(g, lm, v, X, Y, d) {
-  const key = VIEWS[S.idx].key, vw = v.videoWidth, vh = v.videoHeight;
+  const key = curView().key, vw = v.videoWidth, vh = v.videoHeight;
   const p = new Float32Array(99);
   for (let i = 0; i < 33; i++) { p[i * 3] = lm[i].x * vw; p[i * 3 + 1] = lm[i].y * vh; p[i * 3 + 2] = lm[i].visibility == null ? 1 : lm[i].visibility; }
   const f = { p }, vis = ids => ids.every(i => lm[i].visibility > 0.5);
@@ -955,7 +1197,7 @@ function updateTiltUi() {
 }
 
 function guidance(lm, v) {
-  const vw = v.videoWidth, vh = v.videoHeight, want = VIEWS[S.idx].orient;
+  const vw = v.videoWidth, vh = v.videoHeight, want = curView().orient;
   if ((want === 'landscape') !== (vw > vh)) return ['Rotate the phone ' + (want === 'landscape' ? 'sideways' : 'upright'), 'warn'];
   if (!pose) return ['Camera ready (no analysis engine)', ''];
   if (!lm) return ['No person found — step into view', 'warn'];
@@ -996,7 +1238,7 @@ function handleFrame(lm, v) {
       const t = (now - rec.t0) / 1000;
       rec.frames.push({ t, ph: rec.state, p });
       if (rec.state === 'walk' && t - rec.lastThumb >= 0.2 && rec.thumbs.length < 90) { rec.lastThumb = t; rec.thumbs.push({ t, c: grabThumb(v), p }); }
-      if (!rec.snap && t >= STAND * 0.5 && rec.state === 'stand') {
+      if (!rec.snap && t >= standOf(curView()) * 0.5 && rec.state === 'stand') {
         const sc = Math.min(1, 960 / Math.max(vw, vh)), c = document.createElement('canvas');
         c.width = Math.round(vw * sc); c.height = Math.round(vh * sc);
         c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
@@ -1008,7 +1250,7 @@ function handleFrame(lm, v) {
 
 /* ---------- framing check ---------- */
 function frameCheck(lm, v) {
-  const vw = v.videoWidth, vh = v.videoHeight, want = VIEWS[S.idx].orient;
+  const vw = v.videoWidth, vh = v.videoHeight, want = curView().orient;
   if ((want === 'landscape') !== (vw > vh)) return { msg: 'Rotate the phone ' + (want === 'landscape' ? 'sideways' : 'upright'), say: 'Rotate the phone ' + (want === 'landscape' ? 'sideways' : 'upright'), ok: false };
   if (!pose) return { msg: 'Camera ready (no analysis engine)', ok: true };
   if (!lm) return { msg: 'Step into view', say: 'Step into view', ok: false };
@@ -1048,14 +1290,14 @@ $('#recbtn').onclick = () => {
   else if (rec.state === 'stand' || rec.state === 'walk') finishRecording();
 };
 function beginRecording() {
-  const v = $('#vid'), view = VIEWS[S.idx];
+  const v = $('#vid'), view = curView();
   beep(1, .01); // unlock audio on user gesture
   rec = newRec(); rec.state = 'ready'; rec.vw = v.videoWidth; rec.vh = v.videoHeight; rec.tReady = performance.now(); rec.lastSay = rec.tReady;
   setRecUi(); say(`${view.name}. Move away from the camera until your whole body is in the frame.`);
   rec.timer = setInterval(tick, 100);
 }
 function tick() {
-  const now = performance.now(), view = VIEWS[S.idx];
+  const now = performance.now(), view = curView();
   if (rec.state === 'ready') {
     if (rec.sub === 'frame') { $('#big').textContent = ''; $('#ptxt').textContent = 'Move away from the camera until your whole body fits'; $('#barfill').style.width = '0'; return; }
     const left = 5 - (now - rec.tCount) / 1000;
@@ -1065,20 +1307,20 @@ function tick() {
       $('#big').textContent = n; $('#ptxt').textContent = 'Ready. Recording in…'; $('#barfill').style.width = '0';
       return;
     }
-    rec.state = 'stand'; rec.t0 = now; startMR(); say('Stand still'); beep(900, .25); vib(200); setRecUi();
+    rec.state = 'stand'; rec.t0 = now; startMR(); say(view.readyText || 'Stand still'); beep(900, .25); vib(200); setRecUi();
   }
-  const el = (now - rec.t0) / 1000, total = STAND + view.walk;
-  if (rec.state === 'stand' && el >= STAND) { rec.state = 'walk'; say(view.walkText + ' now'); beep(1100, .3); vib([150, 60, 150]); }
+  const el = (now - rec.t0) / 1000, total = standOf(view) + view.walk;
+  if (rec.state === 'stand' && el >= standOf(view)) { rec.state = 'walk'; say(view.walkText + ' now'); beep(1100, .3); vib([150, 60, 150]); }
   if (el >= total) { finishRecording(); return; }
   $('#barfill').style.width = (el / total * 100) + '%';
-  if (rec.state === 'stand') { $('#big').textContent = Math.ceil(STAND - el); $('#ptxt').textContent = 'Stand still'; }
+  if (rec.state === 'stand') { $('#big').textContent = Math.ceil(standOf(view) - el); $('#ptxt').textContent = view.readyText || 'Stand still'; }
   else { $('#big').textContent = ''; $('#ptxt').textContent = `${view.walkText} · ${Math.ceil(total - el)}s`; }
 }
 async function finishRecording() {
   if (rec.state === 'done') return;
   clearInterval(rec.timer);
   const was = rec; rec.state = 'done';
-  const view = VIEWS[S.idx];
+  const view = curView();
   const blob = await new Promise(res => {
     if (!was.mr || was.mr.state === 'inactive') return res(null);
     was.mr.onstop = () => res(new Blob(was.chunks, { type: was.mime || 'video/webm' }));
@@ -1096,7 +1338,7 @@ function commitRecording(view, was, blob, mime) {
     coverage: was.attempts ? was.hits / was.attempts : 0
   };
   d.res = d.frames.length
-    ? analyzeFrames(view.key, d.frames, d.meta, S.patient.height)
+    ? (view.test ? analyzeTest(view.key, d.frames, d.meta, S.patient.height, parseFloat(S.patient.age) || null) : analyzeFrames(view.key, d.frames, d.meta, S.patient.height))
     : { m: null, staticRows: [row('Analysis', 'Not available', 'No body was detected, or the pose engine did not run for this recording', 'warn')], gaitRows: [] };
   if (was.tiltS && was.tiltS.length > 5) {
     const pm = med(was.tiltS.map(x => x.pitch)), rm = med(was.tiltS.map(x => x.roll)), ap = Math.abs(pm), ar = Math.abs(rm);
@@ -1117,13 +1359,13 @@ $('#f-vid').addEventListener('change', async e => {
   try { await processVideoFile(file); } catch (err) { console.warn(err); $('#proc').style.display = 'none'; toast('Could not read that video. Try a different file, or record it with the camera.', 6000); }
 });
 async function processVideoFile(file) {
-  const view = VIEWS[S.idx], url = URL.createObjectURL(file), v = document.createElement('video');
+  const view = curView(), url = URL.createObjectURL(file), v = document.createElement('video');
   v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
   await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error('video')); setTimeout(() => rej(new Error('timeout')), 15000); });
   const dur = v.duration;
   if (!isFinite(dur) || dur < 3) throw new Error('duration');
   const vw = v.videoWidth, vh = v.videoHeight, total = Math.min(dur, 30), step = 1 / 12;
-  const stand = Math.min(STAND, total * 0.4);
+  const stand = Math.min(standOf(view), total * 0.4);
   if ((view.orient === 'landscape') !== (vw > vh)) toast(`This ${view.name.toLowerCase()} is normally filmed ${view.orient === 'landscape' ? 'sideways' : 'upright'}. Continuing anyway.`, 5000);
   procCancel = false; $('#proc').style.display = 'grid';
   const was = newRec(); was.vw = vw; was.vh = vh; was.mime = file.type || 'video/mp4';
@@ -1156,20 +1398,21 @@ async function processVideoFile(file) {
 
 /* ---------- review ---------- */
 function renderReview() {
-  const view = VIEWS[S.idx], d = S.data[view.key];
+  const view = curView(), d = S.data[view.key];
   stepsBar($('#rv-steps'), S.idx);
   $('#rv-title').textContent = `${view.name} — recorded`;
   const v = $('#rv-video');
   if (d.url) { v.style.display = 'block'; v.src = d.url; } else { v.removeAttribute('src'); v.style.display = 'none'; }
   const cov = Math.round(d.coverage * 100), cls = cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad';
   $('#rv-cov').innerHTML = `Body detected in <span class="chip ${cls}">${cov}% of frames</span> ${cov < 60 ? ' — poor detection, please retake with better light and the whole body in view.' : cov < 85 ? ' — acceptable; retake if results look odd.' : ' — good.'}`;
-  $('#rv-rows').innerHTML = d.res.staticRows.slice(0, 4).map(rowHtml).join('') || '<p class="mute">No readings</p>';
+  $('#rv-rows').innerHTML = d.res.staticRows.slice(0, view.test ? 7 : 4).map(rowHtml).join('') || '<p class="mute">No readings</p>';
+  if (view.test) { $('#btn-next').textContent = 'Add to the report →'; $('#btn-skipfoot').style.display = 'none'; show('review'); return; }
   $('#btn-next').textContent = S.idx < 2 ? `Next: ${VIEWS[S.idx + 1].name} →` : 'Next: foot close-ups →';
   $('#btn-skipfoot').style.display = S.idx === 2 ? '' : 'none';
   show('review');
 }
-$('#btn-retake').onclick = () => { const k = VIEWS[S.idx].key; if (S.data[k] && S.data[k].url) URL.revokeObjectURL(S.data[k].url); delete S.data[k]; renderBrief(); show('brief'); };
-$('#btn-next').onclick = () => { $('#rv-video').pause(); if (S.idx < 2) { S.idx++; renderBrief(); show('brief'); } else startFoot(); };
+$('#btn-retake').onclick = () => { const k = curView().key; if (S.data[k] && S.data[k].url) URL.revokeObjectURL(S.data[k].url); delete S.data[k]; renderBrief(); show('brief'); };
+$('#btn-next').onclick = () => { $('#rv-video').pause(); if (S.test) { S.test = null; renderResults(); } else if (S.idx < 2) { S.idx++; renderBrief(); show('brief'); } else startFoot(); };
 $('#btn-skipfoot').onclick = () => { $('#rv-video').pause(); renderResults(); };
 
 /* ---------- results ---------- */
@@ -1216,10 +1459,10 @@ function annotate(key) {
 /* ---------- gait key frames ---------- */
 function pickGaitFrames(key, d) {
   if (!d.thumbs || d.thumbs.length < 4 || !d.meta.w) return [];
-  const side = key === 'side';
+  const side = key === 'side', isTest = TESTS.some(x => x.key === key);
   const fr = d.frames.filter(f => f.ph === 'walk' && okFrame(f, [11, 12, 23, 24, 25, 26, 27, 28], d.meta, 0.4));
   let ev = [];
-  if (fr.length >= 12) {
+  if (fr.length >= 12 && !isTest) {
     const t = fr.map(f => f.t), torso = fr.map(f => len(sub(mid(P(f, 11), P(f, 12)), mid(P(f, 23), P(f, 24)))));
     const sep = smooth(fr.map((f, i) => { const a = P(f, 27), b = P(f, 28); return (side ? Math.abs(a[0] - b[0]) : Math.abs(a[1] - b[1])) / torso[i]; }), 1);
     const p95 = pct(sep, 0.95);
@@ -1235,7 +1478,7 @@ function pickGaitFrames(key, d) {
       }
     }
   }
-  if (ev.length < 4) { const w = d.thumbs; ev = [0, 1, 2, 3, 4, 5].map(i => ({ t: w[Math.round(i * (w.length - 1) / 5)].t, title: 'Walking' })); }
+  if (ev.length < 4) { const w = d.thumbs; ev = [0, 1, 2, 3, 4, 5].map(i => ({ t: w[Math.round(i * (w.length - 1) / 5)].t, title: isTest ? 'Test' : 'Walking' })); }
   const out = [], used = new Set();
   for (const e of ev.slice(0, 6)) {
     let best = null, bd = 1e9;
@@ -1279,9 +1522,19 @@ function renderResults() {
       <div class="gfw"><h3 style="margin-top:14px">Walking frames</h3>${gaitFramesHtml(v.key)}</div></div>`;
   });
   $('#r-views').innerHTML = html;
+  let th = '';
+  for (const t of TESTS) {
+    const d = S.data[t.key]; if (!d) continue;
+    const img = annotate(t.key), cov = Math.round(d.coverage * 100);
+    th += `<div class="card"><h2 style="margin-top:0">${esc(t.name)} <span class="chip ${cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad'}" style="vertical-align:middle">${cov}% detected</span></h2><p class="small mute" style="margin-top:0">${esc(t.what)}</p>
+      <div class="split">${img ? `<div class="pic"><img class="snap" src="${img}" alt="${esc(t.name)} frame"></div>` : ''}<div class="vals">${d.res.staticRows.map(rowHtml).join('')}</div></div>
+      <div class="gfw"><h3 style="margin-top:14px">Frames from the test</h3>${gaitFramesHtml(t.key)}</div></div>`;
+  }
+  $('#r-tests').innerHTML = th + balanceCompare();
+  testButtons($('#r-testbtns'), 'results');
   lastFoot = footResults();
   initFpiAuto();
-  $('#r-foot').innerHTML = lastFoot.map(f => `<div class="card"><h2 style="margin-top:0">Foot · ${esc(f.task.title)}</h2><div class="split"><div class="pic"><img class="snap" src="${f.url}" alt="${esc(f.task.title)} with marked points"></div><div class="vals" style="margin-top:10px">${f.rows.map(rowHtml).join('') || '<p class="mute">No measurements</p>'}</div></div></div>`).join('');
+  $('#r-foot').innerHTML = lastFoot.map(f => `<div class="card"><h2 style="margin-top:0">Foot · ${esc(f.task.title)}</h2><div class="split"><div class="pic"><img class="snap" src="${f.url}" alt="${esc(f.task.title)} with marked points"></div><div class="vals" style="margin-top:10px">${f.rows.map(rowHtml).join('') || '<p class="mute">No measurements</p>'}${f.auto ? `<p class="small mute">${f.auto} point${f.auto > 1 ? 's were' : ' was'} suggested automatically from the foot outline and kept after the examiner checked ${f.auto > 1 ? 'them' : 'it'} on the photo.</p>` : ''}</div></div></div>`).join('');
   $('#r-fpi').innerHTML = fpiCardHtml();
   wireFpi(); renderObs();
   show('results');
@@ -1293,11 +1546,20 @@ function renderResults() {
 // <footdraw>
 const GCOL = { L: '#22d3ee', R: '#fb923c' };
 function footGroups(task) { let o = 0; return task.groups.map(gr => { const r = { ...gr, o }; o += gr.hints.length; return r; }); }
-function computeFootTask(id, pts, w, h) {
-  if (id === 'rear') return footRear(pts, w, h);
-  if (id === 'medL') return footMedial(pts, w, h, 'L');
-  if (id === 'medR') return footMedial(pts, w, h, 'R');
-  if (id === 'top') return footTop(pts, w, h);
+const footN = id => FOOT_TASKS.find(t => t.id === id).groups.reduce((a, g) => a + g.hints.length, 0);
+/* millimetres per pixel from two marked ends of a reference object of known length (points n and n+1) */
+function refScale(pts, w, h, n, refMm) {
+  const a = pts[n], b = pts[n + 1];
+  if (!refMm || !a || !b) return null;
+  const px = len([(a.x - b.x) * w, (a.y - b.y) * h]);
+  return px > 8 ? refMm / px : null;
+}
+function computeFootTask(id, pts, w, h, refMm) {
+  const sc = refScale(pts, w, h, footN(id), refMm);
+  if (id === 'rear') return footRear(pts, w, h, sc);
+  if (id === 'medL') return footMedial(pts, w, h, 'L', sc);
+  if (id === 'medR') return footMedial(pts, w, h, 'R', sc);
+  if (id === 'top') return footTop(pts, w, h, sc);
   return { rows: [], vals: {} };
 }
 function tagImg(g, text, x, y, col, k) {
@@ -1307,14 +1569,18 @@ function tagImg(g, text, x, y, col, k) {
   if (g.roundRect) g.roundRect(x - w / 2, y - hh / 2, w, hh, 7 * k); else g.rect(x - w / 2, y - hh / 2, w, hh);
   g.fill(); g.fillStyle = col; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y + k);
 }
-function renderFoot(cv, task, img, pts, k, active) {
+function renderFoot(cv, task, img, pts, k, active, refMm) {
   if (cv.width !== img.width) cv.width = img.width;
   if (cv.height !== img.height) cv.height = img.height;
   const g = cv.getContext('2d'), W = cv.width, Hh = cv.height;
   g.clearRect(0, 0, W, Hh); g.drawImage(img, 0, 0);
   const P = i => [pts[i].x * W, pts[i].y * Hh];
   g.lineCap = 'round'; g.lineJoin = 'round';
-  const res = computeFootTask(task.id, pts, W, Hh), groups = footGroups(task);
+  const res = computeFootTask(task.id, pts, W, Hh, refMm), groups = footGroups(task), nT = groups.reduce((a, q) => a + q.hints.length, 0);
+  if (pts[nT] && pts[nT + 1]) {
+    g.setLineDash([]); g.strokeStyle = '#a3e635'; g.lineWidth = 4 * k; g.beginPath(); g.moveTo(...P(nT)); g.lineTo(...P(nT + 1)); g.stroke();
+    if (refMm) { const [ax, ay] = P(nT), [bx, by] = P(nT + 1); tagImg(g, `${refMm % 1 ? refMm.toFixed(1) : refMm} mm`, (ax + bx) / 2, (ay + by) / 2 - 18 * k, '#a3e635', k); }
+  }
   for (const gr of groups) {
     const col = GCOL[gr.key], has = n => !!pts[gr.o + n];
     const seg = (a, b, dash) => {
@@ -1342,15 +1608,132 @@ function renderFoot(cv, task, img, pts, k, active) {
     }
   }
   pts.forEach((p, i) => {
-    const gr = groups.find(q => i >= q.o && i < q.o + q.hints.length), col = gr ? GCOL[gr.key] : '#fff', n = i - (gr ? gr.o : 0) + 1;
+    if (!p) return;
+    const gr = groups.find(q => i >= q.o && i < q.o + q.hints.length), col = gr ? GCOL[gr.key] : '#a3e635', n = gr ? i - gr.o + 1 : (i === nT ? 'A' : 'B');
     const x = p.x * W, y = p.y * Hh;
-    g.fillStyle = col; g.strokeStyle = '#fff'; g.lineWidth = 2 * k; g.beginPath(); g.arc(x, y, (i === active ? 6.5 : 4.5) * k, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = col; g.strokeStyle = '#fff'; g.lineWidth = 2 * k;
+    if (p.auto) { g.globalAlpha = .55; g.setLineDash([3 * k, 2 * k]); }
+    g.beginPath(); g.arc(x, y, (i === active ? 6.5 : 4.5) * k, 0, 7); g.fill(); g.stroke(); g.globalAlpha = 1; g.setLineDash([]);
     g.font = `700 ${11 * k}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.lineWidth = 3 * k; g.strokeStyle = '#fff'; g.strokeText(String(n), x + 11 * k, y - 11 * k);
     g.fillStyle = '#0f172a'; g.fillText(String(n), x + 11 * k, y - 11 * k);
   });
 }
 // </footdraw>
+
+/* ---------- automatic point suggestions (outline only) ----------
+   The foot is separated from the background by colour. Only points that can be read from the OUTLINE are suggested
+   (heel at floor level, toe tip, and — with a reference object — the Achilles centre 10 cm above the floor).
+   Joint points (ankle bone, navicular, big-toe joint, Achilles at the heel) are never guessed from proportions. */
+function otsu(vals, max) {
+  const B = 64, bins = new Float64Array(B); let n = vals.length;
+  for (let i = 0; i < n; i++) bins[Math.min(B - 1, (vals[i] / max * B) | 0)]++;
+  let sum = 0; for (let i = 0; i < B; i++) sum += i * bins[i];
+  let wB = 0, sB = 0, best = -1, th = B / 2;
+  for (let i = 0; i < B; i++) { wB += bins[i]; if (!wB) continue; const wF = n - wB; if (!wF) break; sB += i * bins[i]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) ** 2; if (v > best) { best = v; th = i + 1; } }
+  return th / B * max;
+}
+function footMask(data, w, h) {
+  const n = w * h, bw = Math.max(2, Math.round(Math.min(w, h) * 0.04)), bd = [[], [], []];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (x < bw || y < bw || x >= w - bw || y >= h - bw) { const i = (y * w + x) * 4; for (let c = 0; c < 3; c++) bd[c].push(data[i + c]); }
+  const bg = bd.map(a => med(a)), d = new Float32Array(n);
+  for (let i = 0; i < n; i++) d[i] = Math.hypot(data[i * 4] - bg[0], data[i * 4 + 1] - bg[1], data[i * 4 + 2] - bg[2]);
+  const th = Math.max(28, otsu(d, 442));
+  let m = new Uint8Array(n); for (let i = 0; i < n; i++) m[i] = d[i] > th ? 1 : 0;
+  const open = a => { // 3x3 erosion then dilation removes speckle
+    const e = new Uint8Array(n), o = new Uint8Array(n);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) { let ok = 1; for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1; dx++) if (!a[(y + dy) * w + x + dx]) { ok = 0; break; } e[y * w + x] = ok; }
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) if (e[y * w + x]) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) o[(y + dy) * w + x + dx] = 1;
+    return o;
+  };
+  return open(m);
+}
+function comps(m, w, h) {
+  const lab = new Int32Array(w * h), out = [], st = [];
+  for (let i = 0; i < w * h; i++) if (m[i] && !lab[i]) {
+    const id = out.length + 1, c = { id, n: 0, sx: 0, sy: 0 }; lab[i] = id; st.length = 0; st.push(i);
+    while (st.length) { const q = st.pop(), x = q % w, y = (q / w) | 0; c.n++; c.sx += x; c.sy += y;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue; const j = ny * w + nx; if (m[j] && !lab[j]) { lab[j] = id; st.push(j); } } }
+    out.push(c);
+  }
+  return { lab, list: out };
+}
+function extent(m, w, h) {
+  let x0 = w, x1 = -1, y0 = h, y1 = -1, c = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (m[y * w + x]) { c++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  return { x0, x1, y0, y1, c };
+}
+const meanXRows = (m, w, ya, yb) => { let s = 0, c = 0; for (let y = ya; y <= yb; y++) for (let x = 0; x < w; x++) if (m[y * w + x]) { s += x; c++; } return c ? s / c : null; };
+function twoFeet(m, w, h) {
+  const { lab, list } = comps(m, w, h), big = list.filter(c => c.n > 0.015 * w * h).sort((a, b) => b.n - a.n).slice(0, 2);
+  const only = ids => { const o = new Uint8Array(w * h); for (let i = 0; i < o.length; i++) if (ids.includes(lab[i])) o[i] = 1; return o; };
+  if (big.length === 2) { big.sort((a, b) => a.sx / a.n - b.sx / b.n); return [only([big[0].id]), only([big[1].id])]; }
+  if (big.length === 1) { // one blob: split at the narrowest column in the middle if there is a clear gap
+    const col = new Float32Array(w); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (lab[y * w + x] === big[0].id) col[x]++;
+    let xs = -1, best = 1e9; for (let x = Math.round(w * 0.3); x <= Math.round(w * 0.7); x++) if (col[x] < best) { best = col[x]; xs = x; }
+    const mxL = Math.max(...col.slice(0, xs)), mxR = Math.max(...col.slice(xs));
+    if (xs < 0 || best > 0.4 * Math.min(mxL, mxR)) return null;
+    const a = new Uint8Array(w * h), b = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (lab[y * w + x] === big[0].id) (x < xs ? a : b)[y * w + x] = 1;
+    return [a, b];
+  }
+  return null;
+}
+/* rgba: RGBA pixels (w×h). Returns an array of length n (null = not suggested). x,y are 0..1.
+   tenCm = fraction of the image height that equals 10 cm (only when a reference object is marked), else null. */
+function autoFootPoints(rgba, w, h, taskId, tenCm) {
+  const n = footN(taskId), out = Array(n).fill(null), m = footMask(rgba, w, h);
+  const put = (i, x, y) => { if (x != null && y != null && isFinite(x) && isFinite(y)) out[i] = { x: (x + 0.5) / w, y: (y + 0.5) / h }; };
+  const edge = (v, lim) => v <= 1 || v >= lim - 2;
+  if (taskId === 'top' || taskId === 'rear') {
+    const feet = twoFeet(m, w, h); if (!feet) return out;
+    feet.forEach((fm, k) => {
+      const e = extent(fm, w, h), ht = e.y1 - e.y0; if (ht < 0.12 * h) return;
+      const o = taskId === 'top' ? (k ? 5 : 0) : (k ? 3 : 0), heelY = e.y1;
+      if (!edge(heelY, h)) {
+        const hx = meanXRows(fm, w, Math.max(e.y0, heelY - Math.max(1, Math.round(ht * 0.05))), heelY);
+        put(taskId === 'top' ? o : o + 2, hx, heelY);
+      }
+      if (taskId === 'top' && !edge(e.y0, h)) put(o + 1, meanXRows(fm, w, e.y0, e.y0 + Math.max(1, Math.round(ht * 0.04))), e.y0);
+      if (taskId === 'rear' && tenCm && !edge(heelY, h)) {
+        const yy = Math.round(heelY - tenCm * h);
+        if (yy > e.y0 + 2) put(o, meanXRows(fm, w, yy - 1, yy + 1), yy);
+      }
+    });
+    return out;
+  }
+  // medial view: one foot, leg + foot in profile
+  const { lab, list } = comps(m, w, h); if (!list.length) return out;
+  const top = list.reduce((a, b) => b.n > a.n ? b : a), fm = new Uint8Array(w * h);
+  for (let i = 0; i < fm.length; i++) if (lab[i] === top.id) fm[i] = 1;
+  const e = extent(fm, w, h), L = e.x1 - e.x0; if (L < 0.25 * w || edge(e.y1, h)) return out;
+  const bandTop = e.y1 - Math.round(0.4 * L), colH = x => { let c = 0; for (let y = 0; y < h; y++) if (fm[y * w + x]) c++; return c; };
+  let bx0 = w, bx1 = -1;
+  for (let y = Math.max(0, bandTop); y <= e.y1; y++) for (let x = 0; x < w; x++) if (fm[y * w + x]) { if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; }
+  const BL = bx1 - bx0;
+  let heelLeft;
+  { // the leg / ankle rises above the foot band nearer the heel than the toes
+    let sx = 0, c = 0; for (let y = 0; y < Math.max(0, bandTop); y++) for (let x = 0; x < w; x++) if (fm[y * w + x]) { sx += x; c++; }
+    if (c > 0.02 * e.c) { const off = (sx / c - (bx0 + bx1) / 2) / BL; if (Math.abs(off) < 0.06) return out; heelLeft = off < 0; }
+    else { // no leg in the picture: the heel end is the taller one
+      const win = Math.max(2, Math.round(BL * 0.3)); let hl = 0, hr = 0; for (let q = 0; q < win; q++) { hl += colH(bx0 + q); hr += colH(bx1 - q); }
+      if (Math.abs(hl - hr) < 0.15 * Math.max(hl, hr)) return out; heelLeft = hl > hr;
+    }
+  }
+  const edgeCol = Math.max(1, Math.round(BL * 0.03));
+  const colsY = (xa, xb, f) => { const ys = []; for (let x = xa; x <= xb; x++) for (let y = Math.max(0, bandTop); y <= e.y1; y++) if (fm[y * w + x]) ys.push(y); return ys.length ? f(ys) : null; };
+  const hx = heelLeft ? bx0 : bx1, tx = heelLeft ? bx1 : bx0;
+  if (edge(hx, w) || edge(tx, w)) return out;
+  put(0, hx, colsY(heelLeft ? bx0 : bx1 - edgeCol * 2, heelLeft ? bx0 + edgeCol * 2 : bx1, ys => Math.max(...ys)));
+  put(1, tx, colsY(heelLeft ? bx1 - edgeCol : bx0, heelLeft ? bx1 : bx0 + edgeCol, ys => mean(ys)));
+  return out;
+}
+function autoFootFromCanvas(img, taskId, tenCm) {
+  const k = Math.min(1, 240 / Math.max(img.width, img.height)), w = Math.max(16, Math.round(img.width * k)), h = Math.max(16, Math.round(img.height * k));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, w, h);
+  try { return autoFootPoints(g.getImageData(0, 0, w, h).data, w, h, taskId, tenCm); } catch (e) { console.warn(e); return Array(footN(taskId)).fill(null); }
+}
 
 const H_REAR = ['Centre of the Achilles tendon about 10 cm above the heel', 'Centre of the Achilles tendon where it meets the heel (top of the heel)', 'Centre of the heel where it touches the floor'];
 const H_MED = ['Back of the heel — the most rearward point, at floor level', 'Tip of the big toe — the front-most point', 'Inner ankle bone (medial malleolus) — its most prominent point', 'Navicular bump — the bony bump on the inner midfoot, below and in front of the ankle bone', 'Big-toe joint — the bump at the base of the big toe (head of the 1st metatarsal)'];
@@ -1430,22 +1813,57 @@ async function loadPhoto(file) {
 
 /* ---------- landmark marking ---------- */
 function startMark(img) {
-  const task = FOOT_TASKS[fidx];
-  mk = { task, img, pts: [], drag: -1, n: footGroups(task).reduce((a, gr) => a + gr.hints.length, 0) };
+  const task = FOOT_TASKS[fidx], n = footN(task.id);
+  mk = { task, img, pts: Array(n + 2).fill(null), drag: -1, n, refMm: null, mode: null };
   $('#mk-title').textContent = task.title;
-  show('mark'); mkUpdate();
+  $('#mk-auto').checked = !!S.autoOn; $('#mk-ref').value = ''; $('#mk-refbox').open = false; $('#mk-ref-mm').style.display = 'none'; $('#mk-ref-mm').value = '';
+  refUi();
+  show('mark'); if (S.autoOn) mkAutoApply(); else mkUpdate();
 }
+const refName = () => { const o = $('#mk-ref').selectedOptions[0]; return o && o.value && o.value !== 'custom' ? o.textContent.split(' (')[0].toLowerCase() : 'object'; };
+function refUi() {
+  const has = !!mk.refMm, both = mk.pts[mk.n] && mk.pts[mk.n + 1];
+  $('#mk-ref-btn').style.display = has ? '' : 'none'; $('#mk-ref-note').style.display = $('#mk-ref').value ? '' : 'none';
+  $('#mk-ref-btn').textContent = mk.mode === 'ref' ? 'Tap the two ends of the object on the photo…' : both ? 'Re-mark the two ends of the object' : 'Mark the two ends of the object';
+}
+function refFrac() { // fraction of the image height that equals 10 cm
+  const sc = refScale(mk.pts, mk.img.width, mk.img.height, mk.n, mk.refMm);
+  return sc ? (100 / sc) / mk.img.height : null;
+}
+function mkAutoApply(quiet) {
+  if (!mk) return;
+  for (let i = 0; i < mk.n; i++) if (mk.pts[i] && mk.pts[i].auto) mk.pts[i] = null;
+  if (S.autoOn) {
+    const res = autoFootFromCanvas(mk.img, mk.task.id, refFrac());
+    let c = 0; res.forEach((q, i) => { if (q && !mk.pts[i]) { mk.pts[i] = { x: q.x, y: q.y, auto: true }; c++; } });
+    if (!quiet) toast(c ? `${c} point${c > 1 ? 's' : ''} suggested (faded). Check each one and drag it if it is off, then place the rest by hand.` : 'Could not find the foot outline against this background. Place the points by hand — a plain floor or a sheet of white paper helps.', 6000);
+  }
+  mkUpdate();
+}
+$('#mk-auto').onchange = e => { S.autoOn = e.target.checked; mkAutoApply(); };
+$('#mk-ref').onchange = e => {
+  if (!mk) return; const v = e.target.value; $('#mk-refbox').open = true;
+  $('#mk-ref-mm').style.display = v === 'custom' ? '' : 'none';
+  mk.refMm = v === '' ? null : v === 'custom' ? (parseFloat($('#mk-ref-mm').value) || null) : parseFloat(v);
+  mk.pts[mk.n] = mk.pts[mk.n + 1] = null; mk.mode = mk.refMm ? 'ref' : null;
+  refUi(); mkAutoApply(true);
+};
+$('#mk-ref-mm').oninput = e => { if (!mk) return; const v = parseFloat(e.target.value); mk.refMm = v >= 10 && v <= 1000 ? v : null; mk.pts[mk.n] = mk.pts[mk.n + 1] = null; mk.mode = mk.refMm ? 'ref' : null; refUi(); mkUpdate(); };
+$('#mk-ref-btn').onclick = () => { if (!mk || !mk.refMm) return; mk.pts[mk.n] = mk.pts[mk.n + 1] = null; mk.mode = 'ref'; refUi(); mkAutoApply(true); };
 function mkNext() {
-  for (const gr of footGroups(mk.task)) if (mk.pts.length < gr.o + gr.hints.length) return { gr, idx: mk.pts.length - gr.o };
+  for (const gr of footGroups(mk.task)) for (let i = 0; i < gr.hints.length; i++) if (!mk.pts[gr.o + i]) return { gr, idx: i };
   return null;
 }
 function mkUpdate() {
-  const cv = $('#mk-cv'), nx = mkNext(), r = cv.getBoundingClientRect();
-  renderFoot(cv, mk.task, mk.img, mk.pts, cv.width / (r.width || 360), mk.drag);
-  if (nx) { $('#mk-ins').innerHTML = `<b>${nx.gr.name} · point ${nx.idx + 1} of ${nx.gr.hints.length}</b><br>${esc(nx.gr.hints[nx.idx])}`; $('#mk-guide').innerHTML = guideSvg(mk.task.id, nx.gr.key, nx.idx); }
+  const cv = $('#mk-cv'), nx = mkNext(), r = cv.getBoundingClientRect(), placed = mk.pts.slice(0, mk.n).filter(Boolean).length;
+  renderFoot(cv, mk.task, mk.img, mk.pts, cv.width / (r.width || 360), mk.drag, mk.refMm);
+  if (mk.mode === 'ref') { $('#mk-ins').innerHTML = `<b>Reference object</b><br>Tap one end of the ${esc(refName())}, then the other end.`; $('#mk-guide').innerHTML = ''; }
+  else if (nx) { $('#mk-ins').innerHTML = `<b>${nx.gr.name} · point ${nx.idx + 1} of ${nx.gr.hints.length}</b><br>${esc(nx.gr.hints[nx.idx])}`; $('#mk-guide').innerHTML = guideSvg(mk.task.id, nx.gr.key, nx.idx); }
   else { $('#mk-ins').innerHTML = '<b>All points placed ✓</b><br>Drag any point to fine-tune, then save.'; $('#mk-guide').innerHTML = guideSvg(mk.task.id, null, -1); }
-  $('#mk-prog').textContent = `Foot photo ${fidx + 1} of ${FOOT_TASKS.length} · ${mk.pts.length}/${mk.n} points`;
-  $('#mk-done').disabled = mk.pts.length < mk.n;
+  const refOk = !mk.refMm || (mk.pts[mk.n] && mk.pts[mk.n + 1]);
+  $('#mk-prog').textContent = `Foot photo ${fidx + 1} of ${FOOT_TASKS.length} · ${placed}/${mk.n} points`;
+  $('#mk-done').disabled = placed < mk.n || !refOk;
+  $('#mk-done').textContent = placed >= mk.n && !refOk ? 'Mark the reference object to continue' : 'Save measurements';
 }
 const clamp01 = v => Math.max(0, Math.min(1, v));
 function mkPos(e) { const r = $('#mk-cv').getBoundingClientRect(); return { x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height), r }; }
@@ -1464,8 +1882,13 @@ const mkCv = $('#mk-cv');
 mkCv.addEventListener('pointerdown', e => {
   if (!mk) return; e.preventDefault();
   const q = mkPos(e); let hit = -1, best = 30;
-  mk.pts.forEach((p, i) => { const d = Math.hypot((p.x - q.x) * q.r.width, (p.y - q.y) * q.r.height); if (d < best) { best = d; hit = i; } });
-  if (hit < 0) { if (mk.pts.length >= mk.n) return; mk.pts.push({ x: q.x, y: q.y }); hit = mk.pts.length - 1; }
+  mk.pts.forEach((p, i) => { if (!p) return; const d = Math.hypot((p.x - q.x) * q.r.width, (p.y - q.y) * q.r.height); if (d < best) { best = d; hit = i; } });
+  if (hit < 0) {
+    let at = -1;
+    if (mk.mode === 'ref') at = mk.pts[mk.n] ? (mk.pts[mk.n + 1] ? -1 : mk.n + 1) : mk.n;
+    else { const nx = mkNext(); if (nx) at = nx.gr.o + nx.idx; }
+    if (at < 0) return; mk.pts[at] = { x: q.x, y: q.y }; hit = at;
+  }
   mk.drag = hit; try { mkCv.setPointerCapture(e.pointerId); } catch (err) {}
   mkUpdate(); showLoupe(e);
 });
@@ -1473,11 +1896,24 @@ mkCv.addEventListener('pointermove', e => {
   if (!mk || mk.drag < 0) return; e.preventDefault();
   const q = mkPos(e); mk.pts[mk.drag] = { x: q.x, y: q.y }; mkUpdate(); showLoupe(e);
 });
-const mkEnd = () => { if (!mk) return; mk.drag = -1; $('#mk-loupe').style.display = 'none'; mkUpdate(); };
+const mkEnd = () => {
+  if (!mk) return; mk.drag = -1; $('#mk-loupe').style.display = 'none';
+  if (mk.mode === 'ref' && mk.pts[mk.n] && mk.pts[mk.n + 1]) { mk.mode = null; refUi(); if (S.autoOn) { mkAutoApply(true); return; } }
+  mkUpdate();
+};
 mkCv.addEventListener('pointerup', mkEnd); mkCv.addEventListener('pointercancel', mkEnd);
-$('#mk-undo').onclick = () => { if (mk && mk.pts.length) { mk.pts.pop(); mkUpdate(); } };
-$('#mk-reset').onclick = () => { if (mk) { mk.pts = []; mkUpdate(); } };
-$('#mk-done').onclick = () => { S.foot[mk.task.id] = { img: mk.img, pts: mk.pts.map(p => ({ ...p })) }; mk = null; nextFoot(); };
+$('#mk-undo').onclick = () => {
+  if (!mk) return;
+  const lo = mk.mode === 'ref' ? mk.n : 0, hi = mk.mode === 'ref' ? mk.n + 2 : mk.n;
+  for (let i = hi - 1; i >= lo; i--) if (mk.pts[i]) { mk.pts[i] = null; break; }
+  refUi(); mkUpdate();
+};
+$('#mk-reset').onclick = () => { if (mk) { mk.pts = Array(mk.n + 2).fill(null); mk.mode = mk.refMm ? 'ref' : null; refUi(); mkUpdate(); } };
+$('#mk-done').onclick = () => {
+  const auto = mk.pts.slice(0, mk.n).filter(p => p && p.auto).length;
+  S.foot[mk.task.id] = { img: mk.img, pts: mk.pts.map(p => p ? { x: p.x, y: p.y, auto: !!p.auto } : null), refMm: mk.refMm, auto };
+  mk = null; nextFoot();
+};
 $('#mk-retake').onclick = () => { mk = null; renderFBrief(); show('fbrief'); };
 
 /* ---------- foot results + FPI ---------- */
@@ -1486,9 +1922,9 @@ function footResults() {
   const out = [];
   for (const t of FOOT_TASKS) {
     const f = S.foot[t.id]; if (!f) continue;
-    const r = computeFootTask(t.id, f.pts, f.img.width, f.img.height), c = document.createElement('canvas');
-    renderFoot(c, t, f.img, f.pts, Math.max(1, f.img.width / 360), -1);
-    out.push({ task: t, url: c.toDataURL('image/jpeg', .85), rows: r.rows, vals: r.vals });
+    const r = computeFootTask(t.id, f.pts, f.img.width, f.img.height, f.refMm), c = document.createElement('canvas');
+    renderFoot(c, t, f.img, f.pts, Math.max(1, f.img.width / 360), -1, f.refMm);
+    out.push({ task: t, url: c.toDataURL('image/jpeg', .85), rows: r.rows, vals: r.vals, auto: f.auto || 0, refMm: f.refMm || null });
   }
   return out;
 }
@@ -1530,7 +1966,7 @@ function wireFpi() {
 }
 function renderObs() {
   const flagged = [];
-  VIEWS.forEach(v => { const d = S.data[v.key]; if (!d) return; d.res.staticRows.concat(d.res.gaitRows).filter(r => r.status === 'warn' || r.status === 'bad').forEach(r => flagged.push({ view: v.short, ...r })); });
+  VIEWS.concat(TESTS).forEach(v => { const d = S.data[v.key]; if (!d) return; d.res.staticRows.concat(d.res.gaitRows).filter(r => r.status === 'warn' || r.status === 'bad').forEach(r => flagged.push({ view: v.short, ...r })); });
   lastFoot.forEach(f => f.rows.filter(r => r.status === 'warn' || r.status === 'bad').forEach(r => flagged.push({ view: 'Foot', ...r })));
   for (const s of ['L', 'R']) {
     const a = S.fpi[s];
@@ -1547,7 +1983,7 @@ const slug = s => (s || 'patient').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g
 $('#btn-print').onclick = () => window.print();
 window.addEventListener('beforeprint', () => document.querySelectorAll('#results details').forEach(x => x.open = true));
 $('#btn-videos').onclick = async () => {
-  for (const v of VIEWS) {
+  for (const v of VIEWS.concat(TESTS)) {
     const d = S.data[v.key]; if (!d || !d.url) continue;
     const a = document.createElement('a'); a.href = d.url; a.download = `${slug(S.patient.name)}_${v.key}.${d.mime.includes('mp4') ? 'mp4' : 'webm'}`;
     document.body.appendChild(a); a.click(); a.remove(); await sleep(400);
@@ -1555,15 +1991,15 @@ $('#btn-videos').onclick = async () => {
 };
 $('#btn-json').onclick = () => {
   const out = { app: 'FootScope', date: new Date().toISOString(), patient: S.patient, views: {} };
-  for (const v of VIEWS) { const d = S.data[v.key]; if (d) out.views[v.key] = { coverage: d.coverage, standing: d.res.staticRows, walking: d.res.gaitRows }; }
-  out.foot = lastFoot.map(f => ({ id: f.task.id, rows: f.rows })); out.fpi = S.fpi;
+  for (const v of VIEWS.concat(TESTS)) { const d = S.data[v.key]; if (d) out.views[v.key] = { coverage: d.coverage, standing: d.res.staticRows, walking: d.res.gaitRows }; }
+  out.foot = lastFoot.map(f => ({ id: f.task.id, referenceMm: f.refMm, autoSuggestedPoints: f.auto, rows: f.rows })); out.fpi = S.fpi;
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }));
   a.download = `${slug(S.patient.name)}_footscope.json`; a.click();
 };
 $('#btn-new').onclick = () => {
   if (!confirm('Start a new patient? Current videos and results will be cleared from this page.')) return;
   for (const k in S.data) if (S.data[k].url) URL.revokeObjectURL(S.data[k].url);
-  S.data = {}; S.idx = 0; S.foot = {}; S.fpi = { L: Array(6).fill(null), R: Array(6).fill(null) }; $('#p-name').value = $('#p-age').value = $('#p-height').value = $('#p-ft').value = $('#p-in').value = ''; updateHeightUi(); show('home');
+  S.data = {}; S.idx = 0; S.test = null; S.foot = {}; S.fpi = { L: Array(6).fill(null), R: Array(6).fill(null) }; $('#p-name').value = $('#p-age').value = $('#p-height').value = $('#p-ft').value = $('#p-in').value = ''; updateHeightUi(); show('home');
 };
 </script>
 </body>

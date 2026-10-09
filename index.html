@@ -99,10 +99,17 @@ img.snap{width:100%;max-height:420px;object-fit:contain;background:#0f172a;borde
    <h3>Patient</h3>
    <label for="p-name">Name</label>
    <input id="p-name" autocomplete="off" placeholder="Patient name">
+   <label for="p-age">Age</label>
+   <input id="p-age" type="number" inputmode="numeric" min="1" max="110" placeholder="Years">
    <div class="two">
-    <div><label for="p-age">Age</label><input id="p-age" type="number" inputmode="numeric" min="1" max="110" placeholder="Years"></div>
-    <div><label for="p-height">Height (cm)</label><input id="p-height" type="number" inputmode="decimal" min="80" max="230" placeholder="e.g. 170"></div>
+    <div><label for="p-unit">Height unit</label>
+     <select id="p-unit"><option value="ft">Feet &amp; inches</option><option value="cm">Centimetres (cm)</option></select></div>
+    <div id="h-ft"><label>Height (ft / in)</label>
+     <div class="two"><input id="p-ft" type="number" inputmode="numeric" min="2" max="7" placeholder="ft"><input id="p-in" type="number" inputmode="decimal" min="0" max="11.9" step="0.5" placeholder="in"></div></div>
+    <div id="h-cm" style="display:none"><label for="p-height">Height (cm)</label>
+     <input id="p-height" type="number" inputmode="decimal" min="80" max="230" placeholder="e.g. 170"></div>
    </div>
+   <p class="small" id="h-conv" style="min-height:1.4em;color:var(--teal-d);font-weight:600"></p>
    <p class="small mute">Height is used to convert measurements into centimetres. Without it, only angles are reported.</p>
   </div>
 
@@ -544,10 +551,30 @@ function loadPrefs() {
 }
 loadPrefs();
 
+/* height: centimetres or feet & inches (always stored in cm) */
+function readHeight() {
+  if ($('#p-unit').value === 'cm') {
+    const raw = $('#p-height').value.trim(); return { raw, cm: raw ? parseFloat(raw) : null };
+  }
+  const ft = $('#p-ft').value.trim(), inch = $('#p-in').value.trim();
+  if (!ft && !inch) return { raw: '', cm: null };
+  return { raw: ft + inch, cm: (parseFloat(ft || 0) * 12 + parseFloat(inch || 0)) * 2.54 };
+}
+function updateHeightUi() {
+  const ftMode = $('#p-unit').value === 'ft';
+  $('#h-ft').style.display = ftMode ? '' : 'none'; $('#h-cm').style.display = ftMode ? 'none' : '';
+  const { cm } = readHeight(), out = $('#h-conv');
+  if (cm == null || isNaN(cm)) { out.textContent = ''; return; }
+  if (ftMode) out.textContent = `= ${cm.toFixed(1)} cm`;
+  else { const totIn = cm / 2.54; out.textContent = `= ${Math.floor(totIn / 12)} ft ${(totIn % 12).toFixed(1)} in`; }
+}
+['#p-unit', '#p-ft', '#p-in', '#p-height'].forEach(s => $(s).addEventListener('input', updateHeightUi));
+updateHeightUi();
+
 $('#btn-start').onclick = async () => {
-  const h = parseFloat($('#p-height').value);
-  if ($('#p-height').value && (h < 80 || h > 230)) { toast('Please enter height in centimetres (80–230).'); return; }
-  S.patient = { name: $('#p-name').value.trim(), age: $('#p-age').value.trim(), height: h || null };
+  const hh = readHeight(), h = hh.cm;
+  if (hh.raw && (isNaN(h) || h < 80 || h > 230)) { toast('Please enter a valid height (about 2 ft 8 in to 7 ft 6 in, or 80–230 cm).'); return; }
+  S.patient = { name: $('#p-name').value.trim(), age: $('#p-age').value.trim(), height: h ? Math.round(h * 10) / 10 : null };
   S.delay = +$('#o-delay').value; S.facing = $('#o-cam').value; S.voice = $('#o-voice').checked;
   try { localStorage.setItem('footscope-prefs', JSON.stringify({ delay: S.delay, facing: S.facing, voice: S.voice })); } catch (e) {}
   if (!pose) {
@@ -829,7 +856,7 @@ function annotate(key) {
 }
 function renderResults() {
   const p = S.patient, now = new Date();
-  $('#r-pat').innerHTML = `<h2 style="margin-top:0">${esc(p.name || 'Unnamed patient')}</h2><div class="small mute">${p.age ? 'Age ' + esc(p.age) + ' · ' : ''}${p.height ? 'Height ' + esc(p.height) + ' cm · ' : ''}${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+  $('#r-pat').innerHTML = `<h2 style="margin-top:0">${esc(p.name || 'Unnamed patient')}</h2><div class="small mute">${p.age ? 'Age ' + esc(p.age) + ' · ' : ''}${p.height ? 'Height ' + esc(p.height) + ' cm (' + Math.floor(p.height / 2.54 / 12) + ' ft ' + ((p.height / 2.54) % 12).toFixed(1) + ' in) · ' : ''}${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
   const flagged = [];
   let html = '';
   VIEWS.forEach(v => {
@@ -869,7 +896,7 @@ $('#btn-json').onclick = () => {
 $('#btn-new').onclick = () => {
   if (!confirm('Start a new patient? Current videos and results will be cleared from this page.')) return;
   for (const k in S.data) if (S.data[k].url) URL.revokeObjectURL(S.data[k].url);
-  S.data = {}; S.idx = 0; $('#p-name').value = $('#p-age').value = $('#p-height').value = ''; show('home');
+  S.data = {}; S.idx = 0; $('#p-name').value = $('#p-age').value = $('#p-height').value = $('#p-ft').value = $('#p-in').value = ''; updateHeightUi(); show('home');
 };
 </script>
 </body>

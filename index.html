@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FootScope – Posture & Gait Screening</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Ccircle cx='32' cy='14' r='6' fill='%23fff'/%3E%3Cpath d='M32 22v18M32 40l-9 16M32 40l9 16M32 28l-12 8M32 28l12 8' stroke='%23fff' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<style>
+:root{--teal:#0f766e;--teal-d:#115e59;--ink:#0f172a;--mute:#64748b;--bg:#f4f7f8;--card:#fff;--line:#e2e8f0;
+--ok:#15803d;--okbg:#dcfce7;--warn:#b45309;--warnbg:#fef3c7;--bad:#b91c1c;--badbg:#fee2e2}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.screen{display:none;min-height:100dvh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.screen.active{display:block}
+.wrap{max-width:640px;margin:0 auto;padding:18px 16px 36px}
+h1{font-size:26px;margin:4px 0 2px}h2{font-size:20px;margin:6px 0}h3{font-size:16px;margin:0 0 6px}
+p{margin:6px 0}.mute{color:var(--mute)}.small{font-size:13px}
+button{font:inherit;cursor:pointer;border:0;border-radius:14px;padding:14px 18px;font-weight:600}
+.btn{background:var(--teal);color:#fff;width:100%;font-size:17px;margin-top:10px}
+.btn:active{background:var(--teal-d)}
+.btn.sec{background:#e1f0ee;color:var(--teal-d)}
+.btn.ghost{background:transparent;color:var(--mute);font-weight:500}
+.btn[disabled]{opacity:.5}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit;background:#fff;color:var(--ink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:15px;color:var(--ink)}
+.chk input{width:22px;height:22px}
+.logo{display:flex;align-items:center;gap:10px;color:var(--teal-d);font-weight:800;letter-spacing:.3px}
+.logo svg{width:34px;height:34px}
+.steps{display:flex;gap:6px;margin:4px 0 12px}
+.steps div{flex:1;text-align:center;font-size:12px;padding:8px 4px;border-radius:10px;background:#e8eef0;color:var(--mute);font-weight:600}
+.steps .cur{background:var(--teal);color:#fff}.steps .done{background:#bfe3df;color:var(--teal-d)}
+ol.instr{padding:0;margin:6px 0 0;list-style:none;counter-reset:n}
+ol.instr li{counter-increment:n;position:relative;padding:8px 0 8px 40px}
+ol.instr li::before{content:counter(n);position:absolute;left:0;top:8px;width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
+.timeline{display:flex;gap:6px;font-size:13px;margin-top:8px}
+.timeline div{flex:1;background:#eef5f4;border-radius:10px;padding:8px 4px;text-align:center}
+.timeline b{display:block;font-size:16px}
+.diagram svg{width:100%;height:auto;display:block}
+.orient{display:inline-block;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600}
+#toast{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 90px);background:#0f172a;color:#fff;padding:12px 16px;border-radius:12px;z-index:50;display:none;font-size:14px}
+#loader{position:fixed;inset:0;background:#0f172ae6;color:#fff;display:none;place-content:center;text-align:center;z-index:60;font-size:18px;padding:20px}
+/* camera */
+#cam{position:fixed;inset:0;background:#000;color:#fff;min-height:0;padding:0}
+#cam.active{display:flex;flex-direction:column}
+.stage{position:relative;flex:1;min-height:0;overflow:hidden}
+.stage video,.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.stage video{object-fit:contain;background:#000}
+.topbar{position:absolute;top:0;left:0;right:0;display:flex;gap:8px;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 10px) 12px 12px;background:linear-gradient(#000b,#0000);z-index:3}
+.pill{background:#000a;border-radius:999px;padding:8px 14px;font-size:14px;text-align:center}
+.pill.ok{background:#15803dcc}.pill.warn{background:#b45309cc}.pill.rec{background:#dc2626dd}
+.iconbtn{background:#000a;color:#fff;border-radius:50%;width:44px;height:44px;padding:0;font-size:20px;flex:none}
+.bottombar{position:absolute;bottom:0;left:0;right:0;padding:24px 16px calc(env(safe-area-inset-bottom) + 14px);display:flex;flex-direction:column;align-items:center;gap:10px;background:linear-gradient(#0000,#000c);z-index:3}
+.rec{width:78px;height:78px;border-radius:50%;background:transparent;border:5px solid #fff;padding:0;position:relative;flex:none}
+.rec::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#e11d48;transition:.15s}
+.rec.on::after{inset:20px;border-radius:8px}
+.hint{font-size:14px;text-align:center;color:#e2e8f0;max-width:420px}
+.center{position:absolute;inset:0;display:grid;place-content:center;text-align:center;z-index:2;pointer-events:none;text-shadow:0 2px 14px #000}
+.center .big{font-size:110px;font-weight:800;line-height:1}
+.center .txt{font-size:24px;font-weight:700;padding:0 20px}
+.bar{height:6px;background:#fff3;border-radius:6px;overflow:hidden;width:100%;max-width:420px}
+.bar i{display:block;height:100%;background:#22c55e;width:0}
+/* review & results */
+video.rv{width:100%;max-height:60vh;background:#000;border-radius:12px}
+.row{display:flex;justify-content:space-between;gap:12px;padding:10px 0 10px 10px;border-top:1px solid var(--line);border-left:4px solid transparent}
+.row:first-of-type{border-top:0}
+.row .l{font-weight:600}.row small{display:block;color:var(--mute);font-size:12px;font-weight:400}
+.row .v{font-weight:700;text-align:right;align-self:center}
+.row.ok{border-left-color:#22c55e}.row.warn{border-left-color:#f59e0b}.row.bad{border-left-color:#ef4444}
+.row.ok .v{color:var(--ok)}.row.warn .v{color:var(--warn)}.row.bad .v{color:var(--bad)}
+.chip{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+.chip.ok{background:var(--okbg);color:var(--ok)}.chip.warn{background:var(--warnbg);color:var(--warn)}.chip.bad{background:var(--badbg);color:var(--bad)}
+img.snap{width:100%;max-height:420px;object-fit:contain;background:#0f172a;border-radius:12px;display:block}
+.obs li{margin:4px 0}
+.grid-btn{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.disc{font-size:12px;color:var(--mute);border-top:1px dashed var(--line);margin-top:14px;padding-top:10px}
+@media print{
+ body{background:#fff}.noprint,#toast,#loader{display:none!important}
+ .screen{display:none!important}#results{display:block!important}
+ .card{break-inside:avoid;border-color:#cbd5e1}
+ img.snap{max-height:300px}
+}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<section id="home" class="screen active">
+ <div class="wrap">
+  <div class="logo"><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0f766e"/><circle cx="32" cy="14" r="6" fill="#fff"/><path d="M32 22v18M32 40l-9 16M32 40l9 16M32 28l-12 8M32 28l12 8" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/></svg>FOOTSCOPE</div>
+  <h1>Posture & gait screening</h1>
+  <p class="mute">Record three short videos — front, side and back — and get knee, ankle, foot, posture and walking measurements.</p>
+
+  <div class="card">
+   <h3>Patient</h3>
+   <label for="p-name">Name</label>
+   <input id="p-name" autocomplete="off" placeholder="Patient name">
+   <div class="two">
+    <div><label for="p-age">Age</label><input id="p-age" type="number" inputmode="numeric" min="1" max="110" placeholder="Years"></div>
+    <div><label for="p-height">Height (cm)</label><input id="p-height" type="number" inputmode="decimal" min="80" max="230" placeholder="e.g. 170"></div>
+   </div>
+   <p class="small mute">Height is used to convert measurements into centimetres. Without it, only angles are reported.</p>
+  </div>
+
+  <div class="card">
+   <h3>Recording options</h3>
+   <label for="o-cam">Camera</label>
+   <select id="o-cam"><option value="environment">Rear camera (recommended)</option><option value="user">Front camera (self-recording)</option></select>
+   <label for="o-delay">Countdown before each recording</label>
+   <select id="o-delay"><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="15">15 seconds</option></select>
+   <label class="chk"><input id="o-voice" type="checkbox" checked> Voice prompts (“Stand still”, “Walk”)</label>
+  </div>
+
+  <button class="btn" id="btn-start">Start assessment</button>
+  <p class="small mute" style="text-align:center">Videos and measurements stay on this phone. Nothing is uploaded.</p>
+  <p class="disc">FootScope is a screening aid based on 2-D camera pose estimation. It does not diagnose any condition. Results depend on camera position, lighting and clothing, and should be confirmed by clinical examination.</p>
+ </div>
+</section>
+
+<!-- BRIEF -->
+<section id="brief" class="screen">
+ <div class="wrap">
+  <div class="steps" id="b-steps"></div>
+  <h2 id="b-title"></h2>
+  <span class="orient" id="b-orient"></span>
+  <div class="card diagram" id="b-diagram"></div>
+  <div class="card"><h3>Set-up</h3><ol class="instr" id="b-list"></ol></div>
+  <div class="card"><h3>What the recording does</h3><div class="timeline" id="b-time"></div></div>
+  <button class="btn" id="btn-open">Open camera</button>
+  <button class="btn ghost" id="btn-brief-back">← Back</button>
+ </div>
+</section>
+
+<!-- CAMERA -->
+<section id="cam" class="screen">
+ <div class="stage">
+  <video id="vid" playsinline muted autoplay></video>
+  <canvas id="ov"></canvas>
+  <div class="topbar">
+   <button class="iconbtn" id="btn-cam-close" aria-label="Close camera">✕</button>
+   <div class="pill" id="status">Starting camera…</div>
+   <button class="iconbtn" id="btn-flip" aria-label="Switch camera">⟲</button>
+  </div>
+  <div class="center"><div class="big" id="big"></div><div class="txt" id="ptxt"></div></div>
+  <div class="bottombar">
+   <div class="bar"><i id="barfill"></i></div>
+   <div class="hint" id="cam-hint"></div>
+   <button class="rec" id="recbtn" aria-label="Record"></button>
+  </div>
+ </div>
+</section>
+
+<!-- REVIEW -->
+<section id="review" class="screen">
+ <div class="wrap">
+  <div class="steps" id="rv-steps"></div>
+  <h2 id="rv-title"></h2>
+  <div class="card">
+   <video id="rv-video" class="rv" controls playsinline></video>
+   <p id="rv-cov" class="small" style="margin-top:10px"></p>
+  </div>
+  <div class="card"><h3>Quick readings</h3><div id="rv-rows"></div></div>
+  <button class="btn" id="btn-next"></button>
+  <button class="btn sec" id="btn-retake">Retake this view</button>
+ </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results" class="screen">
+ <div class="wrap">
+  <div class="logo"><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0f766e"/><circle cx="32" cy="14" r="6" fill="#fff"/><path d="M32 22v18M32 40l-9 16M32 40l9 16M32 28l-12 8M32 28l12 8" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/></svg>FOOTSCOPE · Report</div>
+  <div class="card" id="r-pat"></div>
+  <div class="card" id="r-obs"></div>
+  <div id="r-views"></div>
+  <p class="disc">Screening aid based on 2-D video pose estimation (MediaPipe). Not a diagnosis. Reference ranges are approximate; confirm findings with clinical examination and, where needed, imaging or gait-lab assessment.</p>
+  <div class="noprint">
+   <button class="btn" id="btn-print">Save / print PDF report</button>
+   <div class="grid-btn">
+    <button class="btn sec" id="btn-videos">Download videos</button>
+    <button class="btn sec" id="btn-json">Download data (JSON)</button>
+   </div>
+   <button class="btn ghost" id="btn-new">Start new patient</button>
+  </div>
+ </div>
+</section>
+
+<div id="toast"></div>
+<div id="loader"><div>Loading analysis engine…<div class="small" style="opacity:.7;margin-top:8px">First load needs internet (about 10 MB)</div></div></div>
+
+<script type="module">
+/* =====================================================================
+   FootScope — posture & gait screening (single file, GitHub Pages ready)
+   ===================================================================== */
+const MP_VER = '0.10.14';
+const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}`;
+const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
+const STAND = 5; // seconds of standing still at the start of every recording
+
+// <analysis>
+/* ---------- maths helpers ---------- */
+const rad = Math.PI / 180;
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+const mul = (a, k) => [a[0] * k, a[1] * k];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1];
+const len = a => Math.hypot(a[0], a[1]);
+const norm = a => { const l = len(a) || 1; return [a[0] / l, a[1] / l]; };
+const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+const med = a => { if (!a.length) return NaN; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const pct = (a, p) => { const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.max(0, Math.round(p * (s.length - 1))))]; };
+const angleBetween = (u, v) => Math.acos(Math.max(-1, Math.min(1, dot(u, v) / ((len(u) * len(v)) || 1)))) / rad;
+const smooth = (a, k = 1) => a.map((_, i) => { let s = 0, n = 0; for (let j = Math.max(0, i - k); j <= Math.min(a.length - 1, i + k); j++) { s += a[j]; n++; } return s / n; });
+const P = (f, i) => [f.p[i * 3], f.p[i * 3 + 1]];
+
+function okFrame(f, ids, meta, minVis = 0.5) {
+  for (const i of ids) {
+    if (f.p[i * 3 + 2] < minVis) return false;
+    const x = f.p[i * 3], y = f.p[i * 3 + 1];
+    if (x < -0.02 * meta.w || x > 1.02 * meta.w || y < -0.02 * meta.h || y > 1.02 * meta.h) return false;
+  }
+  return true;
+}
+
+/* Frontal-plane deviation at the middle joint b (a=proximal, c=distal).
+   u = unit vector pointing to the LATERAL side of this limb.
+   Returns degrees: + valgus (joint medial to the a–c line), − varus (joint lateral). */
+function frontalDev(a, b, c, u) {
+  const ang = angleBetween(sub(b, a), sub(c, b));
+  const d = norm(sub(c, a)), w = sub(b, a), wp = sub(w, mul(d, dot(w, d)));
+  return dot(wp, u) > 0 ? -ang : ang;
+}
+/* tilt of a left/right pair: + means LEFT side lower */
+const tiltDeg = (L, R) => Math.atan2(L[1] - R[1], Math.abs(L[0] - R[0]) || 1e-6) / rad;
+
+function frontalFrame(f, H) {
+  const sL = P(f, 11), sR = P(f, 12), hL = P(f, 23), hR = P(f, 24), kL = P(f, 25), kR = P(f, 26),
+        aL = P(f, 27), aR = P(f, 28), eL = P(f, 7), eR = P(f, 8), heL = P(f, 29), heR = P(f, 30);
+  const mS = mid(sL, sR), mH = mid(hL, hR), mA = mid(aL, aR), mE = mid(eL, eR);
+  const torso = len(sub(mS, mH));
+  const cm = H ? 0.30 * H / torso : null;           // shoulder-joint to hip-joint ≈ 0.30 × stature
+  const u = norm(sub(hL, hR)), ur = [-u[0], -u[1]]; // u points to the person's LEFT in the image
+  const v = sub(mS, mH);
+  const o = {
+    kneeL: frontalDev(hL, kL, aL, u), kneeR: frontalDev(hR, kR, aR, ur),
+    hindL: frontalDev(kL, aL, heL, u), hindR: frontalDev(kR, aR, heR, ur),
+    shoulder: tiltDeg(sL, sR), pelvis: tiltDeg(hL, hR), head: tiltDeg(eL, eR),
+    lean: Math.atan2(dot(v, u), -v[1]) / rad
+  };
+  if (cm) {
+    o.kneeGap = Math.abs(kL[0] - kR[0]) * cm; o.ankleGap = Math.abs(aL[0] - aR[0]) * cm;
+    o.headShift = dot(sub(mE, mA), u) * cm; o.shShift = dot(sub(mS, mA), u) * cm; o.pelShift = dot(sub(mH, mA), u) * cm;
+  }
+  return o;
+}
+
+function sideFrame(f, H) {
+  const vl = mean([11, 23, 25, 27].map(i => f.p[i * 3 + 2])), vr = mean([12, 24, 26, 28].map(i => f.p[i * 3 + 2]));
+  const L = vl >= vr;
+  const id = L ? { sh: 11, hp: 23, kn: 25, an: 27, to: 31, ea: 7 } : { sh: 12, hp: 24, kn: 26, an: 28, to: 32, ea: 8 };
+  const S_ = P(f, id.sh), Hp = P(f, id.hp), K = P(f, id.kn), A = P(f, id.an), T = P(f, id.to), E = P(f, id.ea), N = P(f, 0);
+  const dir = (N[0] - E[0]) >= 0 ? 1 : -1;           // +1 = person faces image-right
+  const fwd = (a, b) => (a[0] - b[0]) * dir;
+  const torso = len(sub(S_, Hp)), cm = H ? 0.30 * H / torso : null;
+  const d = norm(sub(A, Hp)), w = sub(K, Hp), wp = sub(w, mul(d, dot(w, d)));
+  const ang = angleBetween(sub(K, Hp), sub(A, K));
+  const o = {
+    cva: Math.atan2(S_[1] - E[1], fwd(E, S_)) / rad,
+    lean: Math.atan2(fwd(S_, Hp), Hp[1] - S_[1]) / rad,
+    knee: (wp[0] * dir >= 0) ? ang : -ang,           // + flexed, − hyperextended
+    ankle: angleBetween(sub(K, A), sub(T, A)),
+    side: L ? 1 : 0
+  };
+  if (cm) { o.earOff = fwd(E, S_) * cm; o.shOff = fwd(S_, A) * cm; o.hipOff = fwd(Hp, A) * cm; o.kneeOff = fwd(K, A) * cm; }
+  return o;
+}
+
+function aggregate(list) {
+  const o = {};
+  for (const k of Object.keys(list[0])) { const a = list.map(x => x[k]).filter(Number.isFinite); o[k] = a.length ? med(a) : null; }
+  return o;
+}
+
+/* ---------- result rows ---------- */
+const row = (label, value, ref = '', status = 'na') => ({ label, value, ref, status });
+const f1 = n => n.toFixed(1);
+const stOf = (v, okT, warnT) => { const a = Math.abs(v); return a <= okT ? 'ok' : a <= warnT ? 'warn' : 'bad'; };
+
+function kneeRow(label, v) {
+  if (v == null) return row(label, '—');
+  const a = Math.abs(v);
+  return row(label, a < 1 ? `Neutral (${f1(a)}°)` : `${f1(a)}° ${v > 0 ? 'valgus (knock-knee)' : 'varus (bow-leg)'}`, 'Neutral within ±3° (hip–knee–ankle axis)', stOf(v, 3, 6));
+}
+function hindRow(label, v) {
+  if (v == null) return row(label, '—');
+  const status = (v >= -2 && v <= 6) ? 'ok' : ((v > 6 && v <= 10) || (v < -2 && v >= -6)) ? 'warn' : 'bad';
+  return row(label, `${f1(Math.abs(v))}° ${v >= 0 ? 'valgus (pronation tendency)' : 'varus (supination tendency)'}`, 'Normal ≈ −2° to 6° · indicative only', status);
+}
+function levelRow(label, v, okT, warnT) {
+  if (v == null) return row(label, '—');
+  const a = Math.abs(v);
+  return row(label, a < 0.5 ? 'Level' : `${f1(a)}° · ${v > 0 ? 'left' : 'right'} side lower`, `Level within ${okT}°`, stOf(v, okT, warnT));
+}
+function shiftRow(label, v) {
+  if (v == null) return null;
+  return row(label, `${f1(Math.abs(v))} cm to the ${v > 0 ? 'left' : 'right'}`, 'Within 2.5 cm of the ankle mid-line', stOf(v, 2.5, 5));
+}
+
+function frontalStaticRows(key, m) {
+  const R = [];
+  R.push(kneeRow('Right knee alignment', m.kneeR), kneeRow('Left knee alignment', m.kneeL));
+  if (m.kneeGap != null && key === 'front') {
+    R.push(row('Knee gap (centre to centre)', `${f1(m.kneeGap)} cm`, 'Feet together: wide knee gap suggests bow-leg tendency'));
+    R.push(row('Ankle gap (centre to centre)', `${f1(m.ankleGap)} cm`, 'Feet together: wide ankle gap suggests knock-knee tendency'));
+  }
+  if (key === 'back') R.push(hindRow('Right heel / Achilles alignment', m.hindR), hindRow('Left heel / Achilles alignment', m.hindL));
+  R.push(levelRow('Shoulder level', m.shoulder, 2, 4), levelRow('Pelvis (hip) level', m.pelvis, 2, 4), levelRow('Head tilt (ear line)', m.head, 3, 5));
+  const a = Math.abs(m.lean);
+  R.push(row(key === 'back' ? 'Trunk / spine lean' : 'Trunk lean', a < 0.5 ? 'Upright' : `${f1(a)}° toward ${m.lean > 0 ? 'left' : 'right'}`, 'Within 2° of vertical', stOf(m.lean, 2, 4)));
+  for (const r of [shiftRow('Head position', m.headShift), shiftRow('Shoulder position', m.shShift), shiftRow('Pelvis position', m.pelShift)]) if (r) R.push(r);
+  return R;
+}
+
+function sideStaticRows(m) {
+  const R = [], sd = Math.round(m.side) ? 'Left' : 'Right';
+  R.push(row('Head posture (craniovertebral angle)', `${m.cva.toFixed(0)}°`, '≥ 50° normal · lower means forward head', m.cva >= 50 ? 'ok' : m.cva >= 45 ? 'warn' : 'bad'));
+  if (m.earOff != null) R.push(row('Ear vs shoulder', `${f1(Math.abs(m.earOff))} cm ${m.earOff >= 0 ? 'ahead' : 'behind'}`, 'Ear roughly above shoulder (< 3 cm ahead)', m.earOff > 5 ? 'bad' : m.earOff > 3 ? 'warn' : 'ok'));
+  const la = Math.abs(m.lean);
+  R.push(row('Trunk inclination', la < 0.5 ? 'Upright' : `${f1(la)}° ${m.lean > 0 ? 'forward' : 'backward'}`, 'Within 3° of vertical', stOf(m.lean, 3, 6)));
+  const ka = Math.abs(m.knee);
+  R.push(row(`${sd} knee (side view)`, ka < 1 ? 'Straight' : `${f1(ka)}° ${m.knee > 0 ? 'flexed' : 'hyperextended (recurvatum)'}`, '−5° to +5° neutral',
+    m.knee < -10 || m.knee > 10 ? 'bad' : (m.knee < -5 || m.knee > 5) ? 'warn' : 'ok'));
+  R.push(row(`${sd} ankle angle (shank–foot)`, `${m.ankle.toFixed(0)}°`, 'About 80–100° when standing'));
+  if (m.shOff != null) {
+    R.push(row('Shoulder vs ankle line', `${f1(Math.abs(m.shOff))} cm ${m.shOff >= 0 ? 'ahead' : 'behind'}`, 'Plumb-line position'));
+    R.push(row('Hip vs ankle line', `${f1(Math.abs(m.hipOff))} cm ${m.hipOff >= 0 ? 'ahead' : 'behind'}`, 'Plumb-line position'));
+  }
+  return R;
+}
+
+/* ---------- gait ---------- */
+function findPeaks(y, t, minGap, thr) {
+  const pk = [];
+  for (let i = 1; i < y.length - 1; i++) {
+    if (y[i] >= thr && y[i] > y[i - 1] && y[i] >= y[i + 1]) {
+      const last = pk[pk.length - 1];
+      if (last !== undefined && t[i] - t[last] < minGap) { if (y[i] > y[last]) pk[pk.length - 1] = i; }
+      else pk.push(i);
+    }
+  }
+  return pk;
+}
+function detrend(t, y) {
+  const mt = mean(t), my = mean(y); let n = 0, d = 0;
+  for (let i = 0; i < t.length; i++) { n += (t[i] - mt) * (y[i] - my); d += (t[i] - mt) ** 2; }
+  const b = d ? n / d : 0;
+  return y.map((v, i) => v - (my + b * (t[i] - mt)));
+}
+const symIdx = (a, b) => (a.length && b.length) ? Math.abs(mean(a) - mean(b)) / (0.5 * (mean(a) + mean(b))) * 100 : null;
+const symRow = (label, si) => si == null ? null : row(label, `${f1(si)} %`, '< 10 % symmetrical', si < 10 ? 'ok' : si < 20 ? 'warn' : 'bad');
+
+function gaitRows(key, frames, meta, H) {
+  const side = key === 'side';
+  const fr = frames.filter(f => okFrame(f, [11, 12, 23, 24, 25, 26, 27, 28], meta, 0.4));
+  if (fr.length < 12) return [row('Walking', 'Not enough data', 'Keep the whole body in view while walking and retake if needed', 'warn')];
+  const t = fr.map(f => f.t);
+  const torso = fr.map(f => len(sub(mid(P(f, 11), P(f, 12)), mid(P(f, 23), P(f, 24)))));
+  const cmpp = fr.map((f, i) => H ? 0.30 * H / torso[i] : null);
+  const sep = smooth(fr.map((f, i) => { const a = P(f, 27), b = P(f, 28); return (side ? Math.abs(a[0] - b[0]) : Math.abs(a[1] - b[1])) / torso[i]; }), 1);
+  const p95 = pct(sep, 0.95);
+  if (p95 < (side ? 0.5 : 0.08)) return [row('Walking', 'No clear steps detected', 'Walk at a natural pace across/along the marked path and retake', 'warn')];
+
+  const k = Math.max(3, Math.floor(fr.length * 0.2));
+  const hx = fr.map(f => mid(P(f, 23), P(f, 24))[0]);
+  const dirX = mean(hx.slice(-k)) >= mean(hx.slice(0, k)) ? 1 : -1;
+  const raw = findPeaks(sep, t, 0.28, 0.5 * p95).map(i => {
+    const a = P(fr[i], 27), b = P(fr[i], 28);
+    const left = side ? ((a[0] - b[0]) * dirX > 0) : (key === 'front' ? a[1] > b[1] : a[1] < b[1]);
+    return { i, t: t[i], foot: left ? 'L' : 'R' };
+  });
+  const ev = [];
+  for (const e of raw) { const l = ev[ev.length - 1]; if (l && l.foot === e.foot) { if (sep[e.i] > sep[l.i]) ev[ev.length - 1] = e; } else ev.push(e); }
+
+  const stepT = { L: [], R: [] }, stepLen = { L: [], R: [] }, stepW = [];
+  for (let j = 1; j < ev.length; j++) {
+    const e = ev[j], dt = e.t - ev[j - 1].t;
+    if (dt > 0.25 && dt < 1.6) stepT[e.foot].push(dt);
+    const c = cmpp[e.i];
+    if (c) { const dx = Math.abs(P(fr[e.i], 27)[0] - P(fr[e.i], 28)[0]) * c; if (side) stepLen[e.foot].push(dx); else stepW.push(dx); }
+  }
+  const R = [];
+  R.push(row('Steps detected', `${ev.length}`, '6 or more gives a reliable reading', ev.length >= 6 ? 'ok' : 'warn'));
+  const cad = ev.length >= 3 ? (ev.length - 1) / (ev[ev.length - 1].t - ev[0].t) * 60 : null;
+  if (cad) R.push(row('Cadence', `${cad.toFixed(0)} steps/min`, 'Adults ≈ 90–130', cad >= 90 && cad <= 130 ? 'ok' : 'warn'));
+  const tl = stepT.L.length ? f1(mean(stepT.L)) + ' s' : '—', tr = stepT.R.length ? f1(mean(stepT.R)) + ' s' : '—';
+  R.push(row('Step time (L / R)', `${tl} / ${tr}`, 'Time between alternate heel strikes'));
+  const s1 = symRow('Step-time symmetry', symIdx(stepT.L, stepT.R)); if (s1) R.push(s1);
+
+  if (side) {
+    if (stepLen.L.length || stepLen.R.length) {
+      R.push(row('Step length (L / R)', `${stepLen.L.length ? f1(mean(stepLen.L)) : '—'} / ${stepLen.R.length ? f1(mean(stepLen.R)) : '—'} cm`, 'Heel-to-heel distance at foot strike'));
+      const s2 = symRow('Step-length symmetry', symIdx(stepLen.L, stepLen.R)); if (s2) R.push(s2);
+      if (H) { const all = stepLen.L.concat(stepLen.R), r = mean(all) / H; R.push(row('Step length ÷ height', r.toFixed(2), 'Typical 0.37 – 0.45', r >= 0.35 && r <= 0.47 ? 'ok' : 'warn')); }
+    }
+    const flex = { L: [], R: [] }, ank = { L: [], R: [] };
+    for (const f of fr) for (const s of ['L', 'R']) {
+      const [h, kk, a, to] = s === 'L' ? [23, 25, 27, 31] : [24, 26, 28, 32];
+      flex[s].push(angleBetween(sub(P(f, kk), P(f, h)), sub(P(f, a), P(f, kk))));
+      if (f.p[to * 3 + 2] > 0.3) ank[s].push(angleBetween(sub(P(f, kk), P(f, a)), sub(P(f, to), P(f, a))));
+    }
+    for (const s of ['L', 'R']) {
+      if (flex[s].length > 8) { const pk = pct(flex[s], 0.95); R.push(row(`${s === 'L' ? 'Left' : 'Right'} knee peak flexion`, `${pk.toFixed(0)}°`, 'Swing phase ≈ 55–70°', pk >= 45 && pk <= 80 ? 'ok' : 'warn')); }
+    }
+    for (const s of ['L', 'R']) {
+      if (ank[s].length > 8) { const rg = pct(ank[s], 0.95) - pct(ank[s], 0.05); R.push(row(`${s === 'L' ? 'Left' : 'Right'} ankle range of motion`, `${rg.toFixed(0)}°`, 'Walking ≈ 20–35°', rg >= 15 ? 'ok' : 'warn')); }
+    }
+    const fs = { L: [], R: [] };
+    for (const e of ev) {
+      const [he, to] = e.foot === 'L' ? [29, 31] : [30, 32], ps = [];
+      for (let q = e.i; q <= Math.min(fr.length - 1, e.i + 2); q++) { const h = P(fr[q], he), tt = P(fr[q], to); ps.push(Math.atan2(h[1] - tt[1], Math.abs(h[0] - tt[0]) || 1e-6) / rad); }
+      const pm = med(ps); fs[e.foot].push(pm > 10 ? 'Heel' : pm < -5 ? 'Forefoot' : 'Midfoot');
+    }
+    for (const s of ['L', 'R']) if (fs[s].length) {
+      const cnt = {}; fs[s].forEach(x => cnt[x] = (cnt[x] || 0) + 1);
+      const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+      R.push(row(`${s === 'L' ? 'Left' : 'Right'} foot strike`, `${top[0]} (${top[1]}/${fs[s].length})`, 'Most common contact pattern · indicative'));
+    }
+  } else {
+    if (stepW.length) { const w = med(stepW); R.push(row('Step width (ankle centres)', `${f1(w)} cm`, 'Typically ≈ 8–15 cm · very wide > 20 cm', w > 20 ? 'warn' : 'na')); }
+    const ff = fr.map(f => frontalFrame(f, H));
+    if (H) {
+      const x = ff.map((o, i) => (mid(P(fr[i], 23), P(fr[i], 24))[0] - meta.w / 2) * cmpp[i]);
+      const res = detrend(t, x), rg = pct(res, 0.95) - pct(res, 0.05);
+      R.push(row('Trunk sway (side-to-side)', `${f1(rg)} cm`, 'Range of pelvis movement while walking'));
+    }
+    const pr = pct(ff.map(o => o.pelvis), 0.95) - pct(ff.map(o => o.pelvis), 0.05);
+    const sr = pct(ff.map(o => o.shoulder), 0.95) - pct(ff.map(o => o.shoulder), 0.05);
+    R.push(row('Pelvic tilt range', `${f1(pr)}°`, 'Typically < 8° · large drop can suggest hip-abductor weakness', pr < 8 ? 'ok' : pr < 12 ? 'warn' : 'bad'));
+    R.push(row('Shoulder tilt range', `${f1(sr)}°`, 'Typically < 8°', sr < 8 ? 'ok' : 'warn'));
+    const kr = med(ff.map(o => o.kneeR)), kl = med(ff.map(o => o.kneeL));
+    const a = kneeRow('Right knee while walking', kr), b = kneeRow('Left knee while walking', kl);
+    a.ref = b.ref = 'Median axis during walking · within ±4° is typical';
+    a.status = stOf(kr, 4, 7); b.status = stOf(kl, 4, 7);
+    R.push(a, b);
+  }
+  return R;
+}
+
+function analyzeFrames(key, frames, meta, H) {
+  const stand = frames.filter(f => f.ph === 'stand' && f.t > 0.8);
+  const walk = frames.filter(f => f.ph === 'walk');
+  const need = key === 'side' ? [11, 23, 25, 27, 0, 7] : [11, 12, 23, 24, 25, 26, 27, 28];
+  const good = stand.filter(f => okFrame(f, need, meta, key === 'side' ? 0.3 : 0.5));
+  const out = { m: null, staticRows: [], gaitRows: [] };
+  if (good.length >= 6) {
+    const list = good.map(f => key === 'side' ? sideFrame(f, H) : frontalFrame(f, H));
+    out.m = aggregate(list);
+    out.staticRows = key === 'side' ? sideStaticRows(out.m) : frontalStaticRows(key, out.m);
+  } else {
+    out.staticRows = [row('Standing posture', 'Not enough clear frames', 'Keep the whole body in view while standing still, then retake', 'warn')];
+  }
+  out.gaitRows = gaitRows(key, walk, meta, H);
+  return out;
+}
+// </analysis>
+
+/* =====================================================================
+   App
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const VIEWS = [
+  { key: 'front', name: 'Front view', short: 'Front', orient: 'portrait', walk: 8,
+    walkText: 'Walk toward the phone',
+    steps: [
+      '<b>Place the phone upright</b> (portrait) on a tripod, shelf or pile of books. Lens at <b>hip height (≈ 1 m)</b>, phone steady and level.',
+      '<b>Patient stands about 4 m away</b>, <b>facing the camera</b>. Head to feet must be fully in view.',
+      '<b>Shorts or fitted clothing</b>, bare feet or thin socks — knees and ankles must be visible.',
+      '<b>Stand still for 5 seconds:</b> feet together (inner ankles touching if comfortable), knees straight, arms relaxed, eyes on the camera.',
+      '<b>When you hear “Walk”</b>, walk straight toward the phone at a natural pace and stop about 1.5 m before it.'] },
+  { key: 'side', name: 'Side view', short: 'Side', orient: 'landscape', walk: 9,
+    walkText: 'Walk across, then stop',
+    steps: [
+      '<b>Turn the phone sideways</b> (landscape) on a stable support. Lens at <b>hip height (≈ 1 m)</b>, about <b>4 m from the walking line</b>.',
+      '<b>Mark a path about 4 m long</b> across the screen. The whole path and the whole body must stay in view.',
+      '<b>Patient stands at one end, side-on</b> to the phone (either side is fine), arms relaxed, looking straight ahead.',
+      '<b>Stand still for 5 seconds</b> with weight even on both feet.',
+      '<b>When you hear “Walk”</b>, walk once straight across the screen at a natural pace, then stop.'] },
+  { key: 'back', name: 'Back view', short: 'Back', orient: 'portrait', walk: 8,
+    walkText: 'Walk straight away',
+    steps: [
+      '<b>Place the phone upright</b> (portrait), lens at <b>hip height (≈ 1 m)</b>, steady and level.',
+      '<b>Patient stands about 2.5 m from the phone with their back to it.</b> Tie up long hair; wear a fitted top so shoulders and hips are visible.',
+      '<b>Legs and heels bare or in thin socks</b> so both Achilles tendons and heels can be seen.',
+      '<b>Stand still for 5 seconds:</b> feet together (or a fist-width apart), knees straight, arms relaxed.',
+      '<b>When you hear “Walk”</b>, walk straight away from the phone at a natural pace.'] }
+];
+
+const S = { patient: {}, idx: 0, delay: 5, voice: true, facing: 'environment', data: {} };
+let pose = null, poseErr = 0, poseP = null;
+let stream = null, camOn = false, wake = null, lastTs = 0, lastStatusT = 0;
+let rec = newRec();
+let audioCtx = null;
+
+function newRec() { return { state: 'idle', frames: [], attempts: 0, hits: 0, chunks: [], mr: null, timer: null }; }
+
+/* ---------- UI helpers ---------- */
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id)); window.scrollTo(0, 0); }
+let toastT; function toast(m, ms = 4000) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => t.style.display = 'none', ms); }
+function stepsBar(el, cur) {
+  el.innerHTML = VIEWS.map((v, i) => `<div class="${i === cur ? 'cur' : (i < cur || S.data[v.key]) ? 'done' : ''}">${i + 1}. ${v.short}</div>`).join('');
+}
+function say(t) { if (!S.voice || !('speechSynthesis' in window)) return; try { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(t)); } catch (e) {} }
+function beep(freq = 800, dur = .12) {
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = freq; g.gain.value = .15; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + dur); } catch (e) {}
+}
+const vib = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+
+/* ---------- pose engine ---------- */
+async function initPose() {
+  try {
+    const mod = await import(`${MP_URL}/vision_bundle.mjs`);
+    const fileset = await mod.FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
+    const make = delegate => mod.PoseLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: MODEL_URL, delegate }, runningMode: 'VIDEO', numPoses: 1,
+      minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+    try { pose = await make('GPU'); } catch (e) { console.warn('GPU delegate failed, using CPU', e); pose = await make('CPU'); }
+  } catch (e) { console.error('Pose engine failed', e); pose = null; }
+  return pose;
+}
+poseP = initPose();
+
+/* ---------- home ---------- */
+function loadPrefs() {
+  try { const p = JSON.parse(localStorage.getItem('footscope-prefs') || '{}');
+    if (p.delay) $('#o-delay').value = p.delay; if (p.facing) $('#o-cam').value = p.facing; if (p.voice === false) $('#o-voice').checked = false;
+  } catch (e) {}
+}
+loadPrefs();
+
+$('#btn-start').onclick = async () => {
+  const h = parseFloat($('#p-height').value);
+  if ($('#p-height').value && (h < 80 || h > 230)) { toast('Please enter height in centimetres (80–230).'); return; }
+  S.patient = { name: $('#p-name').value.trim(), age: $('#p-age').value.trim(), height: h || null };
+  S.delay = +$('#o-delay').value; S.facing = $('#o-cam').value; S.voice = $('#o-voice').checked;
+  try { localStorage.setItem('footscope-prefs', JSON.stringify({ delay: S.delay, facing: S.facing, voice: S.voice })); } catch (e) {}
+  if (!pose) {
+    $('#loader').style.display = 'grid';
+    await Promise.race([poseP, sleep(25000)]);
+    $('#loader').style.display = 'none';
+    if (!pose) toast('Analysis engine could not load (check internet). You can still record, but no measurements will be calculated.', 7000);
+  }
+  S.idx = 0; S.data = {};
+  renderBrief(); show('brief');
+};
+
+/* ---------- brief ---------- */
+function diagram(key) {
+  const defs = '<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#0f766e"/></marker></defs>';
+  const room = '<rect x="4" y="4" width="312" height="212" rx="14" fill="#f1f5f9" stroke="#cbd5e1"/>';
+  const phone = (x, y) => `<polygon points="${x},${y} ${x - 85},36 ${x + 85},36" fill="#0f766e" opacity=".10"/><rect x="${x - 15}" y="${y - 9}" width="30" height="18" rx="4" fill="#0f766e"/><circle cx="${x}" cy="${y}" r="3.5" fill="#fff"/><text x="${x}" y="${y + 18}" text-anchor="middle" font-size="11" fill="#0f766e" font-weight="700">PHONE</text>`;
+  const person = (x, y, tri) => `<circle cx="${x}" cy="${y}" r="13" fill="#1e293b"/><polygon points="${tri}" fill="#f59e0b"/>`;
+  const dim = (x, y1, y2, txt) => `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="#94a3b8" stroke-dasharray="3 3"/><text x="${x + 6}" y="${(y1 + y2) / 2}" font-size="12" fill="#475569">${txt}</text>`;
+  const lbl = (x, y, t, a = 'middle') => `<text x="${x}" y="${y}" text-anchor="${a}" font-size="12" fill="#0f172a" font-weight="600">${t}</text>`;
+  let b = '';
+  if (key === 'front') b = phone(160, 190) + person(160, 54, '153,64 167,64 160,76') +
+    '<line x1="160" y1="88" x2="160" y2="140" stroke="#0f766e" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#ar)"/>' +
+    lbl(172, 118, 'walk toward phone', 'start') + dim(34, 54, 190, '≈ 4 m') + lbl(160, 28, 'patient FACES the phone');
+  if (key === 'side') b = phone(160, 190) + person(52, 86, '62,80 62,92 74,86') +
+    '<line x1="80" y1="86" x2="262" y2="86" stroke="#0f766e" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#ar)"/>' +
+    lbl(170, 70, 'walk across once (≈ 4 m)') + dim(34, 86, 190, '≈ 4 m') + lbl(160, 28, 'patient side-on to the phone');
+  if (key === 'back') b = phone(160, 190) + person(160, 130, '153,120 167,120 160,108') +
+    '<line x1="160" y1="98" x2="160" y2="46" stroke="#0f766e" stroke-width="3" stroke-dasharray="6 5" marker-end="url(#ar)"/>' +
+    lbl(172, 76, 'walk away', 'start') + dim(34, 130, 190, '≈ 2.5 m') + lbl(160, 24, 'back toward the phone');
+  return `<svg viewBox="0 0 320 220" role="img" aria-label="Positioning diagram">${defs}${room}${b}</svg>`;
+}
+function renderBrief() {
+  const v = VIEWS[S.idx];
+  stepsBar($('#b-steps'), S.idx);
+  $('#b-title').textContent = `View ${S.idx + 1} of 3 — ${v.name}`;
+  $('#b-orient').textContent = v.orient === 'portrait' ? '📱 Hold / place the phone UPRIGHT (portrait)' : '📱 Turn the phone SIDEWAYS (landscape)';
+  $('#b-diagram').innerHTML = diagram(v.key);
+  $('#b-list').innerHTML = v.steps.map(s => `<li>${s}</li>`).join('');
+  $('#b-time').innerHTML = `<div><b>${S.delay}s</b>Get ready</div><div><b>${STAND}s</b>Stand still</div><div><b>${v.walk}s</b>Walk</div>`;
+}
+$('#btn-open').onclick = openCam;
+$('#btn-brief-back').onclick = () => { if (S.idx > 0) { S.idx--; renderBrief(); } else show('home'); };
+
+/* ---------- camera ---------- */
+async function openCam() {
+  show('cam'); setStatus('Starting camera…', '');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('Camera is not available. Open this page over HTTPS in a modern browser.', 6000); show('brief'); return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: S.facing }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false });
+  } catch (e) { toast('Camera blocked. Allow camera access for this site in your browser settings, then try again.', 7000); show('brief'); return; }
+  const v = $('#vid');
+  v.srcObject = stream; v.style.transform = S.facing === 'user' ? 'scaleX(-1)' : 'none';
+  try { await v.play(); } catch (e) {}
+  try { wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+  rec = newRec(); setRecUi();
+  camOn = true; resizeOv(); scheduleFrame();
+}
+function closeCam() {
+  camOn = false; clearInterval(rec.timer);
+  if (stream) stream.getTracks().forEach(t => t.stop()); stream = null;
+  try { wake && wake.release(); } catch (e) {} wake = null;
+  $('#vid').srcObject = null;
+}
+$('#btn-cam-close').onclick = () => {
+  if (rec.mr && rec.mr.state !== 'inactive') { rec.mr.onstop = null; try { rec.mr.stop(); } catch (e) {} }
+  try { speechSynthesis.cancel(); } catch (e) {}
+  closeCam(); rec = newRec(); show('brief');
+};
+$('#btn-flip').onclick = async () => {
+  if (rec.state !== 'idle') return;
+  S.facing = S.facing === 'environment' ? 'user' : 'environment';
+  closeCam(); await openCam();
+};
+window.addEventListener('resize', () => camOn && resizeOv());
+function resizeOv() { const c = $('#ov'), r = c.getBoundingClientRect(), d = window.devicePixelRatio || 1; c.width = r.width * d; c.height = r.height * d; }
+
+function setStatus(txt, cls) { const s = $('#status'); s.textContent = txt; s.className = 'pill ' + cls; }
+function setRecUi() {
+  const r = $('#recbtn'), idle = rec.state === 'idle';
+  r.classList.toggle('on', !idle);
+  $('#cam-hint').textContent = idle ? `Check the whole body is in view, then tap the red button. Recording starts after a ${S.delay}-second countdown.` : (rec.state === 'ready' ? 'Tap again to cancel' : 'Tap to stop early');
+  if (idle) { $('#big').textContent = ''; $('#ptxt').textContent = ''; $('#barfill').style.width = '0'; }
+}
+
+function scheduleFrame() {
+  if (!camOn) return;
+  const v = $('#vid');
+  if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(onFrame); else requestAnimationFrame(onFrame);
+}
+function onFrame() {
+  if (!camOn) return;
+  const v = $('#vid');
+  if (v.videoWidth && v.readyState >= 2) {
+    let lm = null;
+    if (pose) {
+      try { const ts = Math.max(performance.now(), lastTs + 1); lastTs = ts; const r = pose.detectForVideo(v, ts); lm = (r.landmarks && r.landmarks[0]) || null; }
+      catch (e) { console.warn(e); if (++poseErr > 8) { pose = null; toast('Analysis engine stopped unexpectedly. Recording will continue without measurements.'); } }
+    }
+    handleFrame(lm, v);
+  }
+  scheduleFrame();
+}
+
+const CONN = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28], [27, 29], [29, 31], [27, 31], [28, 30], [30, 32], [28, 32], [0, 7], [0, 8]];
+const KEYPTS = [0, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32];
+
+function draw(lm, v) {
+  const c = $('#ov'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+  if (!lm) return;
+  const vw = v.videoWidth, vh = v.videoHeight, sc = Math.min(c.width / vw, c.height / vh);
+  const ox = (c.width - vw * sc) / 2, oy = (c.height - vh * sc) / 2, mir = S.facing === 'user';
+  const X = x => ox + (mir ? 1 - x : x) * vw * sc, Y = y => oy + y * vh * sc;
+  const d = window.devicePixelRatio || 1;
+  g.lineWidth = 3 * d; g.lineCap = 'round'; g.strokeStyle = 'rgba(34,211,238,.9)';
+  for (const [a, b] of CONN) { if (lm[a].visibility < 0.4 || lm[b].visibility < 0.4) continue; g.beginPath(); g.moveTo(X(lm[a].x), Y(lm[a].y)); g.lineTo(X(lm[b].x), Y(lm[b].y)); g.stroke(); }
+  g.fillStyle = '#fff';
+  for (const i of KEYPTS) { if (lm[i].visibility < 0.4) continue; g.beginPath(); g.arc(X(lm[i].x), Y(lm[i].y), 4 * d, 0, 7); g.fill(); }
+}
+
+function guidance(lm, v) {
+  const vw = v.videoWidth, vh = v.videoHeight, want = VIEWS[S.idx].orient;
+  if ((want === 'landscape') !== (vw > vh)) return ['Rotate the phone ' + (want === 'landscape' ? 'sideways' : 'upright'), 'warn'];
+  if (!pose) return ['Camera ready (no analysis engine)', ''];
+  if (!lm) return ['No person found — step into view', 'warn'];
+  const need = [0, 27, 28, 29, 30];
+  if (!need.every(i => lm[i].visibility > 0.5 && lm[i].x > 0.01 && lm[i].x < 0.99 && lm[i].y > 0.01 && lm[i].y < 0.99)) return ['Whole body not in view — move the phone back', 'warn'];
+  const frac = (lm[27].y + lm[28].y) / 2 - lm[0].y;
+  if (frac < 0.38) return ['Person looks small — move a little closer', 'warn'];
+  if (frac > 0.93) return ['Too close — move the phone back', 'warn'];
+  return ['✓ Whole body in view', 'ok'];
+}
+
+function handleFrame(lm, v) {
+  draw(lm, v);
+  const now = performance.now();
+  if (rec.state === 'idle' || rec.state === 'ready') {
+    if (now - lastStatusT > 250) { lastStatusT = now; const [m, c] = guidance(lm, v); setStatus(m, c); }
+  } else if (rec.state === 'stand' || rec.state === 'walk') {
+    setStatus('● REC', 'rec');
+    rec.attempts++;
+    if (lm) {
+      rec.hits++;
+      const vw = v.videoWidth, vh = v.videoHeight, p = new Float32Array(99);
+      for (let i = 0; i < 33; i++) { p[i * 3] = lm[i].x * vw; p[i * 3 + 1] = lm[i].y * vh; p[i * 3 + 2] = lm[i].visibility == null ? 1 : lm[i].visibility; }
+      const t = (now - rec.t0) / 1000;
+      rec.frames.push({ t, ph: rec.state, p });
+      if (!rec.snap && t >= STAND * 0.5 && rec.state === 'stand') {
+        const sc = Math.min(1, 960 / Math.max(vw, vh)), c = document.createElement('canvas');
+        c.width = Math.round(vw * sc); c.height = Math.round(vh * sc);
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        rec.snap = c; rec.snapLm = lm.map(q => ({ x: q.x, y: q.y, visibility: q.visibility }));
+      }
+    }
+  }
+}
+
+/* ---------- recording ---------- */
+function pickMime() {
+  if (!window.MediaRecorder) return '';
+  return ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+}
+function startMR() {
+  rec.chunks = []; rec.mime = pickMime();
+  if (!window.MediaRecorder || !stream) { rec.mr = null; return; }
+  try { rec.mr = new MediaRecorder(stream, rec.mime ? { mimeType: rec.mime, videoBitsPerSecond: 3e6 } : {}); }
+  catch (e) { rec.mr = null; return; }
+  rec.mr.ondataavailable = e => { if (e.data && e.data.size) rec.chunks.push(e.data); };
+  rec.mr.start(500);
+}
+$('#recbtn').onclick = () => {
+  if (rec.state === 'idle') beginRecording();
+  else if (rec.state === 'ready') { clearInterval(rec.timer); rec = newRec(); setRecUi(); try { speechSynthesis.cancel(); } catch (e) {} }
+  else if (rec.state === 'stand' || rec.state === 'walk') finishRecording();
+};
+function beginRecording() {
+  const v = $('#vid'), view = VIEWS[S.idx];
+  beep(1, .01); // unlock audio on user gesture
+  rec = newRec(); rec.state = 'ready'; rec.vw = v.videoWidth; rec.vh = v.videoHeight; rec.tReady = performance.now();
+  setRecUi(); say(`${view.name}. Get into position.`);
+  rec.timer = setInterval(tick, 100);
+}
+function tick() {
+  const now = performance.now(), view = VIEWS[S.idx];
+  if (rec.state === 'ready') {
+    const left = S.delay - (now - rec.tReady) / 1000;
+    if (left > 0) {
+      const n = Math.ceil(left);
+      if (n !== rec.lastN) { rec.lastN = n; beep(660, .08); }
+      $('#big').textContent = n; $('#ptxt').textContent = 'Get into position'; $('#barfill').style.width = '0';
+      return;
+    }
+    rec.state = 'stand'; rec.t0 = now; startMR(); say('Stand still'); beep(900, .25); vib(200); setRecUi();
+  }
+  const el = (now - rec.t0) / 1000, total = STAND + view.walk;
+  if (rec.state === 'stand' && el >= STAND) { rec.state = 'walk'; say(view.walkText + ' now'); beep(1100, .3); vib([150, 60, 150]); }
+  if (el >= total) { finishRecording(); return; }
+  $('#barfill').style.width = (el / total * 100) + '%';
+  if (rec.state === 'stand') { $('#big').textContent = Math.ceil(STAND - el); $('#ptxt').textContent = 'Stand still'; }
+  else { $('#big').textContent = ''; $('#ptxt').textContent = `${view.walkText} · ${Math.ceil(total - el)}s`; }
+}
+async function finishRecording() {
+  if (rec.state === 'done') return;
+  clearInterval(rec.timer);
+  const was = rec; rec.state = 'done';
+  const view = VIEWS[S.idx];
+  const blob = await new Promise(res => {
+    if (!was.mr || was.mr.state === 'inactive') return res(null);
+    was.mr.onstop = () => res(new Blob(was.chunks, { type: was.mime || 'video/webm' }));
+    try { was.mr.stop(); } catch (e) { res(null); }
+  });
+  say('Done'); beep(500, .3); vib(300);
+  const d = S.data[view.key] = {
+    blob, url: blob ? URL.createObjectURL(blob) : null, mime: was.mime || 'video/webm',
+    frames: was.frames, meta: { w: was.vw, h: was.vh }, snap: was.snap, snapLm: was.snapLm,
+    coverage: was.attempts ? was.hits / was.attempts : 0
+  };
+  d.res = d.frames.length
+    ? analyzeFrames(view.key, d.frames, d.meta, S.patient.height)
+    : { m: null, staticRows: [row('Analysis', 'Not available', 'No body was detected, or the pose engine did not run for this recording', 'warn')], gaitRows: [] };
+  closeCam(); rec = newRec(); renderReview();
+}
+
+/* ---------- review ---------- */
+function renderReview() {
+  const view = VIEWS[S.idx], d = S.data[view.key];
+  stepsBar($('#rv-steps'), S.idx);
+  $('#rv-title').textContent = `${view.name} — recorded`;
+  const v = $('#rv-video');
+  if (d.url) { v.style.display = 'block'; v.src = d.url; } else { v.removeAttribute('src'); v.style.display = 'none'; }
+  const cov = Math.round(d.coverage * 100), cls = cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad';
+  $('#rv-cov').innerHTML = `Body detected in <span class="chip ${cls}">${cov}% of frames</span> ${cov < 60 ? ' — poor detection, please retake with better light and the whole body in view.' : cov < 85 ? ' — acceptable; retake if results look odd.' : ' — good.'}`;
+  $('#rv-rows').innerHTML = d.res.staticRows.slice(0, 4).map(rowHtml).join('') || '<p class="mute">No readings</p>';
+  $('#btn-next').textContent = S.idx < 2 ? `Next: ${VIEWS[S.idx + 1].name} →` : 'See results';
+  show('review');
+}
+$('#btn-retake').onclick = () => { const k = VIEWS[S.idx].key; if (S.data[k] && S.data[k].url) URL.revokeObjectURL(S.data[k].url); delete S.data[k]; renderBrief(); show('brief'); };
+$('#btn-next').onclick = () => { $('#rv-video').pause(); if (S.idx < 2) { S.idx++; renderBrief(); show('brief'); } else renderResults(); };
+
+/* ---------- results ---------- */
+function rowHtml(r) {
+  return `<div class="row ${r.status}"><div class="l">${esc(r.label)}${r.ref ? `<small>${esc(r.ref)}</small>` : ''}</div><div class="v">${esc(r.value)}</div></div>`;
+}
+function label(g, text, x, y, h, col) {
+  const fs = Math.max(14, h / 38); g.font = `700 ${fs}px system-ui,sans-serif`;
+  const w = g.measureText(text).width + fs, hh = fs * 1.5;
+  g.fillStyle = 'rgba(15,23,42,.82)'; g.beginPath(); if (g.roundRect) g.roundRect(x - w / 2, y - hh / 2, w, hh, hh / 3); else g.rect(x - w / 2, y - hh / 2, w, hh); g.fill();
+  g.fillStyle = col; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x, y + 1);
+}
+function annotate(key) {
+  const d = S.data[key]; if (!d.snap || !d.snapLm) return null;
+  const c = document.createElement('canvas'); c.width = d.snap.width; c.height = d.snap.height;
+  const g = c.getContext('2d'), w = c.width, h = c.height, lm = d.snapLm, pt = i => [lm[i].x * w, lm[i].y * h];
+  g.drawImage(d.snap, 0, 0);
+  const col = s => s === 'ok' ? '#4ade80' : s === 'warn' ? '#fbbf24' : '#f87171';
+  g.lineCap = 'round';
+  g.lineWidth = Math.max(3, h / 190); g.strokeStyle = 'rgba(255,255,255,.85)';
+  for (const [a, b] of CONN) { if (lm[a].visibility < 0.3 || lm[b].visibility < 0.3) continue; g.beginPath(); g.moveTo(...pt(a)); g.lineTo(...pt(b)); g.stroke(); }
+  g.fillStyle = '#22d3ee'; for (const i of KEYPTS) { if (lm[i].visibility < 0.3) continue; const [x, y] = pt(i); g.beginPath(); g.arc(x, y, Math.max(4, h / 160), 0, 7); g.fill(); }
+  const m = d.res && d.res.m;
+  if (m) {
+    if (key === 'side') {
+      const left = Math.round(m.side), A = pt(left ? 27 : 28), E = pt(left ? 7 : 8), K = pt(left ? 25 : 26);
+      g.setLineDash([12, 10]); g.strokeStyle = '#fde047'; g.lineWidth = Math.max(2, h / 280); g.beginPath(); g.moveTo(A[0], 0); g.lineTo(A[0], h); g.stroke(); g.setLineDash([]);
+      label(g, `Head ${m.cva.toFixed(0)}°`, E[0], Math.max(24, E[1] - h * 0.06), h, col(m.cva >= 50 ? 'ok' : m.cva >= 45 ? 'warn' : 'bad'));
+      label(g, `Knee ${m.knee >= 0 ? '' : '−'}${Math.abs(m.knee).toFixed(0)}°`, K[0], K[1], h, col(Math.abs(m.knee) <= 5 ? 'ok' : 'warn'));
+    } else {
+      for (const [s, hi, ki, ai, v] of [['R', 24, 26, 28, m.kneeR], ['L', 23, 25, 27, m.kneeL]]) {
+        if (v == null) continue;
+        const st = stOf(v, 3, 6), H_ = pt(hi), K = pt(ki), A = pt(ai);
+        g.strokeStyle = col(st); g.lineWidth = Math.max(4, h / 150);
+        g.beginPath(); g.moveTo(...H_); g.lineTo(...K); g.lineTo(...A); g.stroke();
+        const off = (K[0] < w / 2 ? -1 : 1) * w * 0.17;
+        label(g, `${s} ${Math.abs(v).toFixed(1)}° ${v > 0 ? 'valg' : 'varus'}`, Math.min(w - 60, Math.max(60, K[0] + off)), K[1], h, col(st));
+      }
+    }
+  }
+  return c.toDataURL('image/jpeg', .85);
+}
+function renderResults() {
+  const p = S.patient, now = new Date();
+  $('#r-pat').innerHTML = `<h2 style="margin-top:0">${esc(p.name || 'Unnamed patient')}</h2><div class="small mute">${p.age ? 'Age ' + esc(p.age) + ' · ' : ''}${p.height ? 'Height ' + esc(p.height) + ' cm · ' : ''}${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+  const flagged = [];
+  let html = '';
+  VIEWS.forEach(v => {
+    const d = S.data[v.key]; if (!d) return;
+    const img = annotate(v.key), all = d.res.staticRows.concat(d.res.gaitRows);
+    all.filter(r => r.status === 'warn' || r.status === 'bad').forEach(r => flagged.push({ view: v.short, ...r }));
+    const cov = Math.round(d.coverage * 100);
+    html += `<div class="card"><h2 style="margin-top:0">${v.name} <span class="chip ${cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad'}" style="vertical-align:middle">${cov}% detected</span></h2>
+      ${img ? `<img class="snap" src="${img}" alt="${v.name} annotated frame">` : ''}
+      <h3 style="margin-top:14px">Standing posture</h3>${d.res.staticRows.map(rowHtml).join('')}
+      <h3 style="margin-top:14px">Walking</h3>${d.res.gaitRows.map(rowHtml).join('') || '<p class="mute">—</p>'}</div>`;
+  });
+  $('#r-views').innerHTML = html;
+  $('#r-obs').innerHTML = `<h3>Findings to review</h3>` + (flagged.length
+    ? `<ul class="obs">${flagged.map(r => `<li><span class="chip ${r.status}">${r.status === 'bad' ? 'Marked' : 'Mild'}</span> <b>${esc(r.view)}</b> · ${esc(r.label)}: ${esc(r.value)}</li>`).join('')}</ul>`
+    : '<p class="mute">No measurement fell outside the screening ranges.</p>') +
+    '<p class="small mute">“Mild” and “Marked” are screening flags against approximate reference ranges — not diagnoses.</p>';
+  show('results');
+}
+
+/* ---------- exports ---------- */
+const slug = s => (s || 'patient').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'patient';
+$('#btn-print').onclick = () => window.print();
+$('#btn-videos').onclick = async () => {
+  for (const v of VIEWS) {
+    const d = S.data[v.key]; if (!d || !d.url) continue;
+    const a = document.createElement('a'); a.href = d.url; a.download = `${slug(S.patient.name)}_${v.key}.${d.mime.includes('mp4') ? 'mp4' : 'webm'}`;
+    document.body.appendChild(a); a.click(); a.remove(); await sleep(400);
+  }
+};
+$('#btn-json').onclick = () => {
+  const out = { app: 'FootScope', date: new Date().toISOString(), patient: S.patient, views: {} };
+  for (const v of VIEWS) { const d = S.data[v.key]; if (d) out.views[v.key] = { coverage: d.coverage, standing: d.res.staticRows, walking: d.res.gaitRows }; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' }));
+  a.download = `${slug(S.patient.name)}_footscope.json`; a.click();
+};
+$('#btn-new').onclick = () => {
+  if (!confirm('Start a new patient? Current videos and results will be cleared from this page.')) return;
+  for (const k in S.data) if (S.data[k].url) URL.revokeObjectURL(S.data[k].url);
+  S.data = {}; S.idx = 0; $('#p-name').value = $('#p-age').value = $('#p-height').value = ''; show('home');
+};
+</script>
+</body>
+</html>

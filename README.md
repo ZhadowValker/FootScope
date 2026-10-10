@@ -12,6 +12,10 @@ Everything runs on the phone. No video or data is uploaded.
 
 First load needs internet (pose model, about 10 MB, loaded from jsDelivr / Google storage).
 
+## Checklist and flow
+
+After the patient details, a checklist shows the three videos, four foot photos and five add-on tests with their status and a suggested next step. Do them in any order, redo any item, skip what you don't need, and open the report whenever something is done. Set-up steps fold away after you have seen them once for a view; the camera screen has a voice on/off button; the report has a section jump bar, a summary at the top and a Share summary button; leaving the page with unsaved results asks for confirmation.
+
 ## How a session works
 
 1. Enter patient name, age and height (height gives centimetre values).

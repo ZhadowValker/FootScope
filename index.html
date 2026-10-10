@@ -89,15 +89,26 @@ ol.instr li::before{content:counter(n);position:absolute;left:0;top:9px;width:30
 .diagram svg{width:100%;height:auto;display:block}
 .orient{display:inline-block;background:var(--warnbg);color:var(--warn);border-radius:999px;padding:5px 13px;font-size:13.5px;font-weight:650}
 .dock{position:sticky;bottom:0;z-index:5;margin:20px -16px -28px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--dock);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+.noprint-print{display:none}
 .dock .btn{margin-top:0}.dock .btn+.btn,.dock .dockrow+.btn{margin-top:8px}
 .dockrow{display:flex;gap:10px}.dockrow .btn{flex:1}.dockrow .btn.sq{flex:none}
-.trow{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 2px;color:var(--ink)}
+.trow{display:flex;align-items:center;gap:14px;width:calc(100% + 20px);margin:0 -10px;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 10px;color:var(--ink)}
 .trow:first-child{border-top:0}
 .trow .ti{width:42px;height:42px;border-radius:calc(var(--ri) + 2px);background:var(--accent-soft);color:var(--accent-soft-ink);display:grid;place-items:center;flex:none}
 html[data-theme="tape"] .trow .ti{background:#FFC800;color:#101113;border:2px solid #101113}
 .trow .ti svg{width:24px;height:24px}
 .trow .tt{flex:1;min-width:0;font-weight:650;line-height:1.25}.trow .tt small{display:block;font-weight:400;color:var(--mute);font-size:13px}
 .trow .tc{color:var(--mute);font-size:20px}.trow .tc.on{color:var(--ok);font-weight:800}
+.hubbar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden;margin:10px 0 4px}
+.hubbar i{display:block;height:100%;background:var(--accent-grad);width:0;transition:width .3s}
+.trow.next{background:var(--accent-soft);border-radius:var(--ri);border-top-color:transparent}
+.trow.next+.trow{border-top-color:transparent}
+.trow .tt small.go{color:var(--link);font-weight:600}
+.jump{display:flex;gap:8px;overflow-x:auto;position:sticky;top:0;z-index:4;margin:0 -16px;padding:8px 16px;background:var(--bg);scrollbar-width:none}
+.jump::-webkit-scrollbar{display:none}
+.jump button{flex:none;padding:8px 15px;font-size:14px;background:var(--surface2);color:var(--ink);border-radius:999px;font-weight:600;border:var(--bw) solid var(--cardb)}
+.sumrow{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 10px}
+.sumrow .chip{font-size:14px;padding:5px 13px}
 .sheet{position:fixed;inset:0;z-index:70;display:none}.sheet.open{display:block}
 .sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.55)}
 .sheet-body{position:absolute;left:0;right:0;bottom:0;max-width:640px;margin:0 auto;background:var(--surface);color:var(--ink);border-radius:var(--r) var(--r) 0 0;padding:20px 16px calc(18px + env(safe-area-inset-bottom));max-height:88dvh;overflow:auto;animation:sheetup .22s ease-out}
@@ -263,15 +274,25 @@ details summary{cursor:pointer;color:var(--link);font-weight:650;margin:8px 0;mi
    <label class="chk"><input id="o-voice" type="checkbox" checked> Voice prompts (“Stand still”, “Walk”)</label>
   </div>
 
-  <div class="card">
-   <h3>Add-on tests</h3>
-   <p class="small mute" style="margin-top:0">Each test is recorded on its own and added to the report.</p>
-   <div id="home-tests"></div>
-  </div>
-
   <p class="small mute">Videos and measurements stay on this phone. Nothing is uploaded.</p>
   <p class="disc">FootScope is a screening aid based on 2-D camera pose estimation. It does not diagnose any condition. Results depend on camera position, lighting and clothing, and should be confirmed by clinical examination.</p>
   <div class="dock"><button class="btn" id="btn-start">Start assessment</button></div>
+ </div>
+</section>
+
+<!-- HUB -->
+<section id="hub" class="screen">
+ <div class="wrap">
+  <div class="topline"><div class="logo"><svg viewBox="0 0 64 64" aria-hidden="true"><rect class="mk-bg" width="64" height="64" rx="14"/><circle class="mk-fd" cx="32" cy="14" r="6"/><path class="mk-fg" d="M32 22v18M32 40l-9 16M32 40l9 16M32 28l-12 8M32 28l12 8" stroke-width="4" stroke-linecap="round"/></svg>FootScope</div><button class="lookbtn" aria-label="Change the look of the app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.8 0-1.2-1-1.4-1-2.5 0-.9.7-1.7 1.7-1.7H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>Look</button></div>
+  <h1 id="hub-name" style="font-size:calc(var(--h1) - 4px)"></h1>
+  <p class="small mute" id="hub-sub" style="margin-top:0"></p>
+  <div class="hubbar" aria-hidden="true"><i id="hub-fill"></i></div>
+  <p class="small mute" id="hub-count" style="margin:0 0 4px"></p>
+  <div class="card"><h3>Videos</h3><div id="hub-views"></div></div>
+  <div class="card"><h3>Foot photos</h3><div id="hub-foot"></div></div>
+  <div class="card"><h3>Add-on tests</h3><div id="hub-tests"></div></div>
+  <button class="btn ghost" id="hub-home">← Change patient details</button>
+  <div class="dock"><button class="btn" id="hub-go"></button><button class="btn sec" id="hub-report">See report</button></div>
  </div>
 </section>
 
@@ -282,8 +303,8 @@ details summary{cursor:pointer;color:var(--link);font-weight:650;margin:8px 0;mi
   <h2 id="b-title"></h2>
   <span class="orient" id="b-orient"></span>
   <div class="card diagram" id="b-diagram"></div>
-  <div class="card"><h3>Set-up</h3><ol class="instr" id="b-list"></ol>
-   <p class="small mute" style="margin-top:8px">On the camera screen a <b>level line</b> shows whether the phone is straight — aim for green. The <b>∠</b> button shows live joint angles.</p></div>
+  <div class="card"><details id="b-det"><summary style="margin:0"><b style="font-family:var(--fh);font-size:18px">Set-up steps</b> <span class="small mute" id="b-seen"></span></summary><ol class="instr" id="b-list"></ol>
+   <p class="small mute" style="margin-top:8px">On the camera screen a <b>level line</b> shows whether the phone is straight — aim for green. The <b>∠</b> button shows live joint angles.</p></details></div>
   <div class="card"><h3>What the recording does</h3><div class="timeline" id="b-time"></div></div>
   <input type="file" id="f-vid" accept="video/*" hidden>
   <p class="small mute" style="margin:4px 0 0">Gallery video: it should start with a few seconds standing still, then the movement, with the whole body in view.</p>
@@ -299,6 +320,7 @@ details summary{cursor:pointer;color:var(--link);font-weight:650;margin:8px 0;mi
   <div class="topbar">
    <button class="iconbtn" id="btn-cam-close" aria-label="Close camera">✕</button>
    <div class="pill" id="status">Starting camera…</div>
+   <button class="iconbtn" id="btn-voice" aria-label="Turn voice prompts on or off">🔊</button>
    <button class="iconbtn on" id="btn-ang" aria-label="Show or hide live angles">∠</button>
    <button class="iconbtn" id="btn-flip" aria-label="Switch camera">⟲</button>
   </div>
@@ -386,6 +408,7 @@ details summary{cursor:pointer;color:var(--link);font-weight:650;margin:8px 0;mi
  <div class="wrap">
   <div class="topline"><div class="logo"><svg viewBox="0 0 64 64" aria-hidden="true"><rect class="mk-bg" width="64" height="64" rx="14"/><circle class="mk-fd" cx="32" cy="14" r="6"/><path class="mk-fg" d="M32 22v18M32 40l-9 16M32 40l9 16M32 28l-12 8M32 28l12 8" stroke-width="4" stroke-linecap="round"/></svg>FootScope</div><button class="lookbtn noprint" aria-label="Change the look of the app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.8 0-1.2-1-1.4-1-2.5 0-.9.7-1.7 1.7-1.7H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>Look</button></div>
   <div class="card hero" id="r-pat"></div>
+  <nav class="jump noprint" id="r-jump" aria-label="Jump to a section"></nav>
   <div class="card" id="r-obs"></div>
   <div id="r-views"></div>
   <div id="r-tests"></div>
@@ -395,6 +418,10 @@ details summary{cursor:pointer;color:var(--link);font-weight:650;margin:8px 0;mi
   <div class="signbox"><div>Examiner</div><div>Signature</div><div>Date</div></div>
   <p class="disc">Screening aid based on 2-D video pose estimation (MediaPipe). Not a diagnosis. Reference ranges are approximate; confirm findings with clinical examination and, where needed, imaging or gait-lab assessment.</p>
   <div class="noprint">
+   <div class="grid-btn">
+    <button class="btn sec" id="btn-hub" style="margin-top:0">Back to checklist</button>
+    <button class="btn sec" id="btn-share" style="margin-top:0">Share summary</button>
+   </div>
    <div class="grid-btn">
     <button class="btn sec" id="btn-videos">Download videos</button>
     <button class="btn sec" id="btn-json">Download data (JSON)</button>
@@ -407,7 +434,7 @@ details summary{cursor:pointer;color:var(--link);font-weight:650;margin:8px 0;mi
 
 <div id="proc"><div style="font-size:18px;font-weight:700" id="proc-txt">Analysing video…</div><div class="bar2"><i id="proc-fill"></i></div><div class="small" style="opacity:.75">Keep this page open</div><div><button id="proc-cancel">Cancel</button></div></div>
 <div class="sheet" id="look" role="dialog" aria-modal="true" aria-label="Choose a look"><div class="sheet-bg" id="look-bg"></div><div class="sheet-body"><h3>Choose a look</h3><p class="small mute" style="margin:0">Applies on this phone only. Printed reports always use the plain clinic layout.</p><div id="look-list"></div><button class="btn ghost" id="look-close">Close</button></div></div>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 <div id="loader"><div>Loading analysis engine…<div class="small" style="opacity:.7;margin-top:8px">First load needs internet (about 10 MB)</div></div></div>
 
 <script type="module">
@@ -1067,11 +1094,11 @@ $('#btn-start').onclick = async () => {
   if (!await prepare()) return;
   for (const v of VIEWS) if (S.data[v.key] && S.data[v.key].url) URL.revokeObjectURL(S.data[v.key].url);
   for (const v of VIEWS) delete S.data[v.key];
-  S.test = null; S.idx = 0; S.foot = {}; S.fpi = { L: Array(6).fill(null), R: Array(6).fill(null) };
-  renderBrief(); show('brief');
+  for (const t of TESTS) { if (S.data[t.key] && S.data[t.key].url) URL.revokeObjectURL(S.data[t.key].url); delete S.data[t.key]; }
+  S.test = null; S.idx = 0; S.foot = {}; S.fpi = { L: Array(6).fill(null), R: Array(6).fill(null) }; S.back = 'hub';
+  renderHub(); show('hub');
 };
 async function startTest(key, from) {
-  if (from === 'home' && !await prepare()) return;
   if (S.data[key] && S.data[key].url) URL.revokeObjectURL(S.data[key].url);
   delete S.data[key];
   S.test = TESTS.find(t => t.key === key); S.back = from;
@@ -1091,6 +1118,38 @@ function testButtons(el, from) {
   el.innerHTML = TESTS.map(t => { const u = T_UI[t.key]; return `<button class="trow" data-t="${t.key}"><span class="ti">${T_ICO[u[0]]}</span><span class="tt">${esc(u[1])}<small>${esc(u[2])}</small></span>${S.data[t.key] ? '<span class="tc on" aria-label="Recorded">✓</span>' : '<span class="tc" aria-hidden="true">›</span>'}</button>`; }).join('');
   el.querySelectorAll('button').forEach(b => b.onclick = () => startTest(b.dataset.t, from));
 }
+
+/* ---------- checklist hub ---------- */
+const V_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"/><path d="M12 7.5v7M12 14.5l-3.5 6M12 14.5l3.5 6M12 10l-4 2.5M12 10l4 2.5"/></svg>';
+const F_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.5c2-.8 3.8.3 3.8 2.8v5.2c3.3.2 7.2 1 7.2 4.7v2.3H6.5C5 14 5.5 6 8 3.5z"/></svg>';
+function hubItems() {
+  const it = [];
+  VIEWS.forEach((v, i) => it.push({ grp: 'views', ico: V_ICO, title: v.name, sub: v.orient === 'portrait' ? 'Phone upright' : 'Phone sideways', done: !!S.data[v.key], run: () => { S.test = null; S.idx = i; S.back = 'hub'; renderBrief(); show('brief'); } }));
+  FOOT_TASKS.forEach((t, i) => it.push({ grp: 'foot', ico: F_ICO, title: t.title, sub: 'Photo, crop, mark points', done: !!S.foot[t.id], run: () => { fidx = i; S.test = null; renderFBrief(); show('fbrief'); } }));
+  TESTS.forEach(t => { const u = T_UI[t.key]; it.push({ grp: 'tests', ico: T_ICO[u[0]], title: u[1], sub: u[2], done: !!S.data[t.key], run: () => startTest(t.key, 'hub') }); });
+  return it;
+}
+function renderHub() {
+  const p = S.patient || {}, it = hubItems(), core = it.filter(x => x.grp !== 'tests'), done = core.filter(x => x.done).length, nxt = core.find(x => !x.done);
+  $('#hub-name').textContent = p.name || 'Unnamed patient';
+  $('#hub-sub').textContent = [p.age ? 'Age ' + p.age : '', p.height ? 'Height ' + p.height + ' cm' : ''].filter(Boolean).join(', ') || 'No age or height entered';
+  $('#hub-fill').style.width = (done / core.length * 100) + '%';
+  $('#hub-count').textContent = `${done} of ${core.length} core steps done. Do them in any order, skip what you don’t need.`;
+  for (const g of ['views', 'foot', 'tests']) {
+    const el = $('#hub-' + g); el.innerHTML = '';
+    it.filter(x => x.grp === g).forEach(x => {
+      const b = document.createElement('button'); b.className = 'trow' + (x === nxt ? ' next' : '');
+      b.innerHTML = `<span class="ti">${x.ico}</span><span class="tt">${esc(x.title)}<small class="${x === nxt ? 'go' : ''}">${x === nxt ? 'Next up. ' : ''}${x.done ? 'Done. Tap to redo' : esc(x.sub)}</small></span>${x.done ? '<span class="tc on" aria-label="Done">✓</span>' : '<span class="tc" aria-hidden="true">›</span>'}`;
+      b.onclick = x.run; el.appendChild(b);
+    });
+  }
+  const go = $('#hub-go');
+  go.textContent = nxt ? `Continue: ${nxt.title}` : 'All core steps done'; go.disabled = !nxt; go.onclick = nxt ? nxt.run : null;
+  const any = it.some(x => x.done); $('#hub-report').disabled = !any; $('#hub-report').onclick = () => renderResults();
+}
+$('#hub-home').onclick = () => show('home');
+$('#btn-hub').onclick = () => { renderHub(); show('hub'); };
+window.addEventListener('beforeunload', e => { if (Object.keys(S.data).length || Object.keys(S.foot).length) { e.preventDefault(); e.returnValue = ''; } });
 /* ---------- looks (visual templates) ---------- */
 const LOOKS = [
   { id: 'clinic', name: 'Clinic', desc: 'Bright and calm. Best in daylight rooms.', bg: '#F3F6F5', card: '#FFFFFF', ac: '#0B6E6E' },
@@ -1110,7 +1169,6 @@ const lookOpen = o => $('#look').classList.toggle('open', o);
 document.querySelectorAll('.lookbtn').forEach(b => b.onclick = () => lookOpen(true));
 $('#look-close').onclick = $('#look-bg').onclick = () => lookOpen(false);
 window.addEventListener('keydown', e => { if (e.key === 'Escape') lookOpen(false); });
-testButtons($('#home-tests'), 'home');
 
 /* ---------- brief ---------- */
 function diagram(key) {
@@ -1142,14 +1200,18 @@ function testDiagram(v) {
 function renderBrief() {
   const v = curView();
   stepsBar($('#b-steps'), S.idx);
-  $('#b-title').textContent = v.test ? `Test — ${v.name}` : `View ${S.idx + 1} of 3 — ${v.name}`;
+  const seen = seenBrief(v.key); $('#b-det').open = !seen; $('#b-seen').textContent = seen ? '(seen before, tap to review)' : '';
+  $('#b-title').textContent = v.test ? `Test: ${v.name}` : `Video ${S.idx + 1} of 3: ${v.name}`;
   $('#b-orient').textContent = v.orient === 'portrait' ? '📱 Hold / place the phone UPRIGHT (portrait)' : '📱 Turn the phone SIDEWAYS (landscape)';
   $('#b-diagram').innerHTML = v.test ? testDiagram(v) : diagram(v.key);
   $('#b-list').innerHTML = v.steps.map(s => `<li>${s}</li>`).join('');
   $('#b-time').innerHTML = `<div><b>✓</b>Frame check</div><div><b>5-4-3-2-1</b>Ready</div><div><b>${standOf(v)}s</b>${v.test ? 'Get ready' : 'Stand still'}</div><div><b>${v.walk}s</b>${v.test ? 'Test' : 'Walk'}</div>`;
 }
-$('#btn-open').onclick = openCam;
-$('#btn-brief-back').onclick = () => { if (S.test) { S.test = null; if (S.back === 'results') renderResults(); else show('home'); } else if (S.idx > 0) { S.idx--; renderBrief(); } else show('home'); };
+const seenKey = k => 'fs-seen-' + k;
+const seenBrief = k => { try { return !!localStorage.getItem(seenKey(k)); } catch (e) { return false; } };
+const markSeen = k => { try { localStorage.setItem(seenKey(k), '1'); } catch (e) {} };
+$('#btn-open').onclick = () => { markSeen(curView().key); openCam(); };
+$('#btn-brief-back').onclick = () => { const was = S.back; S.test = null; if (was === 'results') renderResults(); else { renderHub(); show('hub'); } };
 
 /* ---------- camera ---------- */
 async function openCam() {
@@ -1164,7 +1226,7 @@ async function openCam() {
   v.srcObject = stream; v.style.transform = S.facing === 'user' ? 'scaleX(-1)' : 'none';
   try { await v.play(); } catch (e) {}
   try { wake = await navigator.wakeLock.request('screen'); } catch (e) {}
-  rec = newRec(); setRecUi();
+  rec = newRec(); setRecUi(); $('#btn-voice').textContent = S.voice ? '🔊' : '🔇';
   camOn = true; resizeOv(); scheduleFrame();
   if (await motionP) startTilt();
 }
@@ -1180,6 +1242,7 @@ $('#btn-cam-close').onclick = () => {
   try { speechSynthesis.cancel(); } catch (e) {}
   closeCam(); rec = newRec(); show('brief');
 };
+$('#btn-voice').onclick = () => { S.voice = !S.voice; $('#btn-voice').textContent = S.voice ? '🔊' : '🔇'; if (!S.voice) { try { speechSynthesis.cancel(); } catch (e) {} } toast(S.voice ? 'Voice prompts on' : 'Voice prompts off', 1500); };
 $('#btn-flip').onclick = async () => {
   if (rec.state !== 'idle') return;
   S.facing = S.facing === 'environment' ? 'user' : 'environment';
@@ -1484,7 +1547,7 @@ function commitRecording(view, was, blob, mime) {
 
 /* ---------- video from gallery ---------- */
 let procCancel = false;
-$('#btn-gal').onclick = () => $('#f-vid').click();
+$('#btn-gal').onclick = () => { markSeen(curView().key); $('#f-vid').click(); };
 $('#proc-cancel').onclick = () => { procCancel = true; };
 $('#f-vid').addEventListener('change', async e => {
   const file = e.target.files && e.target.files[0]; e.target.value = '';
@@ -1545,15 +1608,13 @@ function renderReview() {
     $('#rv-cropimg').src = annotate(view.key) || '';
   } else cb.style.display = 'none';
   $('#rv-rows').innerHTML = d.res.staticRows.slice(0, view.test ? 7 : 4).map(rowHtml).join('') || '<p class="mute">No readings</p>';
-  if (view.test) { $('#btn-next').textContent = 'Add to the report →'; $('#btn-skipfoot').style.display = 'none'; show('review'); return; }
-  $('#btn-next').textContent = S.idx < 2 ? `Next: ${VIEWS[S.idx + 1].name} →` : 'Next: foot close-ups →';
-  $('#btn-skipfoot').style.display = S.idx === 2 ? '' : 'none';
+  $('#btn-next').textContent = view.test && S.back === 'results' ? 'Add to the report' : 'Save and continue'; $('#btn-skipfoot').style.display = 'none';
   show('review');
 }
 $('#rv-cropon').onchange = e => { const d = S.data[curView().key]; if (!d) return; d.cropOn = e.target.checked; d.gaitImgs = null; $('#rv-cropimg').src = annotate(curView().key) || ''; };
 $('#btn-retake').onclick = () => { const k = curView().key; if (S.data[k] && S.data[k].url) URL.revokeObjectURL(S.data[k].url); delete S.data[k]; renderBrief(); show('brief'); };
-$('#btn-next').onclick = () => { $('#rv-video').pause(); if (S.test) { S.test = null; renderResults(); } else if (S.idx < 2) { S.idx++; renderBrief(); show('brief'); } else startFoot(); };
-$('#btn-skipfoot').onclick = () => { $('#rv-video').pause(); renderResults(); };
+$('#btn-next').onclick = () => { $('#rv-video').pause(); const was = S.back; S.test = null; if (was === 'results') renderResults(); else { renderHub(); show('hub'); } };
+$('#btn-skipfoot').onclick = () => { $('#rv-video').pause(); renderHub(); show('hub'); };
 
 /* ---------- results ---------- */
 function rowHtml(r) {
@@ -1655,7 +1716,7 @@ function renderResults() {
   VIEWS.forEach(v => {
     const d = S.data[v.key]; if (!d) return;
     const img = annotate(v.key), cov = Math.round(d.coverage * 100);
-    html += `<div class="card"><h2 style="margin-top:0">${v.name} <span class="chip ${cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad'}" style="vertical-align:middle">${cov}% detected</span></h2>
+    html += `<div class="card" id="sec-${v.key}"><h2 style="margin-top:0">${v.name} <span class="chip ${cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad'}" style="vertical-align:middle">${cov}% detected</span></h2>
       <div class="split">${img ? `<div class="pic"><img class="snap" src="${img}" alt="${v.name} annotated frame"></div>` : ''}<div class="vals">
       <h3 style="margin-top:14px">Standing posture</h3>${d.res.staticRows.map(rowHtml).join('')}
       <h3 style="margin-top:14px">Walking</h3>${d.res.gaitRows.map(rowHtml).join('') || '<p class="mute">—</p>'}</div></div>
@@ -1666,7 +1727,7 @@ function renderResults() {
   for (const t of TESTS) {
     const d = S.data[t.key]; if (!d) continue;
     const img = annotate(t.key), cov = Math.round(d.coverage * 100);
-    th += `<div class="card"><h2 style="margin-top:0">${esc(t.name)} <span class="chip ${cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad'}" style="vertical-align:middle">${cov}% detected</span></h2><p class="small mute" style="margin-top:0">${esc(t.what)}</p>
+    th += `<div class="card" id="sec-${t.key}"><h2 style="margin-top:0">${esc(t.name)} <span class="chip ${cov >= 85 ? 'ok' : cov >= 60 ? 'warn' : 'bad'}" style="vertical-align:middle">${cov}% detected</span></h2><p class="small mute" style="margin-top:0">${esc(t.what)}</p>
       <div class="split">${img ? `<div class="pic"><img class="snap" src="${img}" alt="${esc(t.name)} frame"></div>` : ''}<div class="vals">${d.res.staticRows.map(rowHtml).join('')}</div></div>
       <div class="gfw"><h3 style="margin-top:14px">Frames from the test</h3>${gaitFramesHtml(t.key)}</div></div>`;
   }
@@ -1674,9 +1735,12 @@ function renderResults() {
   testButtons($('#r-testbtns'), 'results');
   lastFoot = footResults();
   initFpiAuto();
-  $('#r-foot').innerHTML = lastFoot.map(f => `<div class="card"><h2 style="margin-top:0">Foot · ${esc(f.task.title)}</h2><div class="split"><div class="pic"><img class="snap" src="${f.url}" alt="${esc(f.task.title)} with marked points"></div><div class="vals" style="margin-top:10px">${f.rows.map(rowHtml).join('') || '<p class="mute">No measurements</p>'}${f.auto ? `<p class="small mute">${f.auto} point${f.auto > 1 ? 's were' : ' was'} suggested automatically from the foot outline and kept after the examiner checked ${f.auto > 1 ? 'them' : 'it'} on the photo.</p>` : ''}</div></div></div>`).join('');
+  $('#r-foot').innerHTML = lastFoot.map(f => `<div class="card" id="sec-foot-${f.task.id}"><h2 style="margin-top:0">Foot · ${esc(f.task.title)}</h2><div class="split"><div class="pic"><img class="snap" src="${f.url}" alt="${esc(f.task.title)} with marked points"></div><div class="vals" style="margin-top:10px">${f.rows.map(rowHtml).join('') || '<p class="mute">No measurements</p>'}${f.auto ? `<p class="small mute">${f.auto} point${f.auto > 1 ? 's were' : ' was'} suggested automatically from the foot outline and kept after the examiner checked ${f.auto > 1 ? 'them' : 'it'} on the photo.</p>` : ''}</div></div></div>`).join('');
   $('#r-fpi').innerHTML = fpiCardHtml();
   wireFpi(); renderObs();
+  const secs = [...VIEWS.filter(v => S.data[v.key]).map(v => [v.key, v.short]), ...TESTS.filter(t => S.data[t.key]).map(t => [t.key, t.short]), ...(lastFoot.length ? [['foot-' + lastFoot[0].task.id, 'Feet']] : []), ['fpi', 'FPI']];
+  $('#r-jump').innerHTML = secs.map(([id, l]) => `<button data-s="sec-${id}">${esc(l)}</button>`).join('');
+  $('#r-jump').querySelectorAll('button').forEach(b => b.onclick = () => { const el = document.getElementById(b.dataset.s); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   show('results');
 }
 
@@ -1925,11 +1989,11 @@ function renderFBrief() {
   $('#fb-diagram').innerHTML = guideSvg(t.id, null, -1);
   $('#fb-list').innerHTML = t.steps.map(x => `<li>${x}</li>`).join('');
 }
-function nextFoot() { fidx++; if (fidx < FOOT_TASKS.length) { renderFBrief(); show('fbrief'); } else renderResults(); }
+function nextFoot() { renderHub(); show('hub'); }
 $('#fb-cam').onclick = () => $('#f-cam').click();
 $('#fb-gal').onclick = () => $('#f-gal').click();
 $('#fb-skip').onclick = nextFoot;
-$('#fb-back').onclick = () => { if (fidx > 0) { fidx--; renderFBrief(); } else renderReview(); };
+$('#fb-back').onclick = () => { renderHub(); show('hub'); };
 for (const id of ['#f-cam', '#f-gal']) $(id).addEventListener('change', async e => {
   const file = e.target.files && e.target.files[0]; e.target.value = '';
   if (!file) return;
@@ -2113,7 +2177,7 @@ mkCv.addEventListener('pointerdown', e => {
     let at = -1;
     if (mk.mode === 'ref') at = mk.pts[mk.n] ? (mk.pts[mk.n + 1] ? -1 : mk.n + 1) : mk.n;
     else { const nx = mkNext(); if (nx) at = nx.gr.o + nx.idx; }
-    if (at < 0) return; mk.pts[at] = { x: q.x, y: q.y }; hit = at;
+    if (at < 0) return; mk.pts[at] = { x: q.x, y: q.y }; hit = at; vib(12);
   }
   mk.drag = hit; try { mkCv.setPointerCapture(e.pointerId); } catch (err) {}
   mkUpdate(); showLoupe(e);
@@ -2169,7 +2233,7 @@ function fpiCardHtml() {
     const auto = S.fpiAuto && (S.fpiAuto.L[i] != null || S.fpiAuto.R[i] != null);
     return `<tr><td>${i + 1}. ${esc(it[0])}${auto ? '<small>pre-filled from your photo — check it</small>' : ''}</td><td><select data-s="L" data-i="${i}">${opt('L', i)}</select></td><td><select data-s="R" data-i="${i}">${opt('R', i)}</select></td></tr>`;
   }).join('');
-  return `<div class="card fpi"><h2 style="margin-top:0">Foot Posture Index (FPI-6)</h2>
+  return `<div class="card fpi" id="sec-fpi"><h2 style="margin-top:0">Foot Posture Index (FPI-6)</h2>
     <p class="small mute">Pronation / supination score. Score each item for each foot from −2 (supinated) to +2 (pronated).</p>
     <table><tr><th>Item</th><th>Left</th><th>Right</th></tr>${rows}
     <tr><td><b>Total</b></td><td id="fpi-tot-L"></td><td id="fpi-tot-R"></td></tr></table>
@@ -2190,6 +2254,12 @@ function wireFpi() {
   }));
   updateFpiTotals();
 }
+let lastFlagged = [];
+function summaryText() {
+  const p = S.patient || {}, L = [`FootScope screening: ${p.name || 'Unnamed patient'}${p.age ? ', age ' + p.age : ''} (${new Date().toLocaleDateString()})`];
+  if (!lastFlagged.length) L.push('No measurement fell outside the screening ranges.'); else lastFlagged.forEach(r => L.push(`${r.status === 'bad' ? 'Marked' : 'Mild'}: ${r.view}, ${r.label}: ${r.value}`));
+  L.push('Screening aid, not a diagnosis.'); return L.join('\n');
+}
 function renderObs() {
   const flagged = [];
   VIEWS.concat(TESTS).forEach(v => { const d = S.data[v.key]; if (!d) return; d.res.staticRows.concat(d.res.gaitRows).filter(r => r.status === 'warn' || r.status === 'bad').forEach(r => flagged.push({ view: v.short, ...r })); });
@@ -2198,7 +2268,9 @@ function renderObs() {
     const a = S.fpi[s];
     if (a.every(v => v != null)) { const t = a.reduce((x, y) => x + y, 0), [c, st] = fpiClass(t); if (st !== 'ok') flagged.push({ view: 'FPI', label: `${s === 'L' ? 'Left' : 'Right'} foot posture`, value: `${t > 0 ? '+' : ''}${t} · ${c}`, status: st }); }
   }
-  $('#r-obs').innerHTML = `<h3>Findings to review</h3>` + (flagged.length
+  lastFlagged = flagged;
+  const nb = flagged.filter(r => r.status === 'bad').length, nw = flagged.length - nb;
+  $('#r-obs').innerHTML = `<h3>Summary</h3><div class="sumrow">${nb ? `<span class="chip bad">${nb} marked</span>` : ''}${nw ? `<span class="chip warn">${nw} mild</span>` : ''}${flagged.length ? '' : '<span class="chip ok">Nothing outside the screening ranges</span>'}</div>` + (flagged.length
     ? `<ul class="obs">${flagged.map(r => `<li><span class="chip ${r.status}">${r.status === 'bad' ? 'Marked' : 'Mild'}</span> <b>${esc(r.view)}</b> · ${esc(r.label)}: ${esc(r.value)}</li>`).join('')}</ul>`
     : '<p class="mute">No measurement fell outside the screening ranges.</p>') +
     '<p class="small mute">“Mild” and “Marked” are screening flags against approximate reference ranges — not diagnoses.</p>';
@@ -2207,6 +2279,11 @@ function renderObs() {
 /* ---------- exports ---------- */
 const slug = s => (s || 'patient').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'patient';
 $('#btn-print').onclick = () => window.print();
+$('#btn-share').onclick = async () => {
+  const text = summaryText();
+  try { if (navigator.share) { await navigator.share({ title: 'FootScope summary', text }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text); toast('Summary copied. Paste it into a message.'); } catch (e) { toast('Could not copy. Use Save or print PDF instead.'); }
+};
 window.addEventListener('beforeprint', () => document.querySelectorAll('#results details').forEach(x => x.open = true));
 $('#btn-videos').onclick = async () => {
   for (const v of VIEWS.concat(TESTS)) {

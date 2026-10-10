@@ -66,6 +66,17 @@ These are screening measures from 2-D phone video; sway, bounce and running valu
 - **Foot photos** (camera or gallery) open a crop screen first. A box is suggested automatically around the feet/legs; drag the corners (or the box) to adjust, or choose the whole photo. Marking then happens on the cropped picture.
 - **Videos** (camera or gallery): the report pictures and walking frames are zoomed to the hips-to-feet area (the legs and heels), worked out from the tracked body. A checkbox on the review screen turns the zoom off. The saved video file itself stays full-frame.
 
+## Looks (visual templates)
+
+Tap **Look** on the home or results screen to switch the whole app between four designs. The choice is remembered on that phone; printed reports always use the plain Clinic layout.
+
+- **Clinic**: bright and calm, teal accent, for daylight rooms.
+- **Tape**: measuring-tape yellow and black, square and high contrast.
+- **Radiograph**: dark blue-black with cyan lines and viewer-style corner marks, for dim rooms.
+- **Pressure map**: deep indigo with a heat-map gradient accent.
+
+Every screen shares one layout: a ruler-style progress rail, large touch targets, and a sticky bottom action bar for the main step.
+
 ## Notes
 
 - Screening aid only, not a diagnosis. 2-D pose estimation from a single phone camera has limits.

@@ -3,46 +3,113 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f766e">
+<meta name="theme-color" id="meta-theme" content="#F3F6F5">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("footscope-theme")||"clinic"}catch(e){document.documentElement.dataset.theme="clinic"}</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>FootScope – Posture & Gait Screening</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Ccircle cx='32' cy='14' r='6' fill='%23fff'/%3E%3Cpath d='M32 22v18M32 40l-9 16M32 40l9 16M32 28l-12 8M32 28l12 8' stroke='%23fff' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
 <style>
-:root{--teal:#0f766e;--teal-d:#115e59;--ink:#0f172a;--mute:#64748b;--bg:#f4f7f8;--card:#fff;--line:#e2e8f0;
---ok:#15803d;--okbg:#dcfce7;--warn:#b45309;--warnbg:#fef3c7;--bad:#b91c1c;--badbg:#fee2e2}
+/* ===== design tokens: four looks (Clinic is the default) ===== */
+html{--bg:#F3F6F5;--surface:#fff;--surface2:#E9F0EE;--ink:#13211E;--mute:#5A6B67;--line:#DAE4E1;--cardb:var(--line);--bw:1px;
+--accent:#0B6E6E;--accent-ink:#fff;--accent-grad:var(--accent);--accent-soft:#DCEFEC;--accent-soft-ink:#095858;--mark:#0B6E6E;--link:#095858;--btnb:0 solid transparent;
+--r:18px;--rb:14px;--ri:12px;--font:'Figtree',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--fh:var(--font);--hw:700;--h1:30px;--h1ls:-.02em;
+--shadow:0 1px 2px rgba(19,33,30,.05),0 8px 24px -12px rgba(19,33,30,.16);--field:#fff;--dock:rgba(243,246,245,.9);--rail:#8FA6A1;--figure:#EEF3F2;
+--ok:#15803d;--okbg:#dcfce7;--warn:#a85a08;--warnbg:#fef0c7;--bad:#b91c1c;--badbg:#fee2e2;color-scheme:light;
+--teal:var(--accent);--teal-d:var(--link);--card:var(--surface)}
+html[data-theme="tape"]{--bg:#E8E9EB;--surface:#fff;--surface2:#F3F3F4;--ink:#101113;--mute:#55585F;--line:#C8CBD0;--cardb:#101113;--bw:2px;
+--accent:#FFC800;--accent-ink:#101113;--accent-soft:#FFF0A8;--accent-soft-ink:#101113;--mark:#101113;--link:#101113;--btnb:2px solid #101113;
+--r:8px;--rb:6px;--ri:6px;--font:'Barlow',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--fh:'Barlow Condensed','Barlow',system-ui,sans-serif;--hw:700;--h1:40px;--h1ls:-.005em;
+--shadow:4px 4px 0 #101113;--field:#fff;--dock:rgba(232,233,235,.94);--rail:#101113;--figure:#F3F3F4}
+html[data-theme="radiograph"]{--bg:#080E15;--surface:#101A26;--surface2:#172433;--ink:#E4EEF6;--mute:#8DA2B6;--line:#21324A;--cardb:#21324A;--bw:1px;
+--accent:#6FD3F7;--accent-ink:#04202B;--accent-soft:#12303F;--accent-soft-ink:#9BE0F9;--mark:#6FD3F7;--link:#6FD3F7;--btnb:0 solid transparent;
+--r:10px;--rb:10px;--ri:8px;--font:'IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--fh:var(--font);--hw:600;--h1:28px;--h1ls:-.01em;
+--shadow:none;--field:#0B131D;--dock:rgba(8,14,21,.9);--rail:#3C5875;--figure:#DDE7EF;
+--ok:#4ADE80;--okbg:rgba(74,222,128,.14);--warn:#FBBF24;--warnbg:rgba(251,191,36,.14);--bad:#F87171;--badbg:rgba(248,113,113,.15);color-scheme:dark}
+html[data-theme="pressure"]{--bg:#120E1E;--surface:#1C1730;--surface2:#262040;--ink:#F2EFFF;--mute:#A8A0C8;--line:#322A52;--cardb:#322A52;--bw:1px;
+--accent:#FBBF24;--accent-ink:#150F24;--accent-grad:linear-gradient(90deg,#3B82F6 0%,#22C55E 36%,#FACC15 68%,#EF4444 100%);--accent-soft:#2D2550;--accent-soft-ink:#F2EFFF;--mark:#FBBF24;--link:#FBBF24;--btnb:0 solid transparent;
+--r:24px;--rb:999px;--ri:14px;--font:'Outfit',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--fh:var(--font);--hw:700;--h1:32px;--h1ls:-.025em;
+--shadow:0 12px 30px -16px rgba(0,0,0,.7);--field:#150F26;--dock:rgba(18,14,30,.9);--rail:#5B4F8A;--figure:#E8E4F7;
+--ok:#4ADE80;--okbg:rgba(74,222,128,.14);--warn:#FBBF24;--warnbg:rgba(251,191,36,.14);--bad:#FB7185;--badbg:rgba(251,113,133,.16);color-scheme:dark}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.screen{display:none;min-height:100dvh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font)}
+:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+.screen{display:none;min-height:100dvh;padding:env(safe-area-inset-top) 0 0}
 .screen.active{display:block}
-.wrap{max-width:640px;margin:0 auto;padding:18px 16px 36px}
-h1{font-size:26px;margin:4px 0 2px}h2{font-size:20px;margin:6px 0}h3{font-size:16px;margin:0 0 6px}
-p{margin:6px 0}.mute{color:var(--mute)}.small{font-size:13px}
-button{font:inherit;cursor:pointer;border:0;border-radius:14px;padding:14px 18px;font-weight:600}
-.btn{background:var(--teal);color:#fff;width:100%;font-size:17px;margin-top:10px}
-.btn:active{background:var(--teal-d)}
-.btn.sec{background:#e1f0ee;color:var(--teal-d)}
-.btn.ghost{background:transparent;color:var(--mute);font-weight:500}
-.btn[disabled]{opacity:.5}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0}
-label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
-input,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit;background:#fff;color:var(--ink)}
+.wrap{max-width:640px;margin:0 auto;padding:16px 16px 28px}
+h1,h2,h3{font-family:var(--fh);font-weight:var(--hw);letter-spacing:var(--h1ls)}
+h1{font-size:var(--h1);line-height:1.1;margin:18px 0 6px}h2{font-size:23px;line-height:1.15;margin:8px 0}h3{font-size:18px;margin:0 0 8px}
+p{margin:6px 0}.mute{color:var(--mute)}.small{font-size:13.5px}
+button{font:inherit;cursor:pointer;border:0;border-radius:var(--rb);padding:14px 18px;font-weight:650;color:inherit;transition:transform .08s ease,filter .15s}
+button:active{transform:scale(.985)}
+.btn{background:var(--accent-grad);color:var(--accent-ink);border:var(--btnb);width:100%;font-size:17px;min-height:54px;margin-top:10px;font-family:var(--fh);font-weight:700;letter-spacing:.005em}
+html[data-theme="tape"] .btn{font-size:21px}
+.btn:active{filter:brightness(.92)}
+.btn.sec{background:var(--accent-soft);color:var(--accent-soft-ink);border:var(--btnb)}
+html[data-theme="tape"] .btn.sec{background:#fff;color:#101113}
+.btn.ghost{background:transparent;color:var(--mute);font-weight:500;border:0;min-height:44px}
+.btn[disabled]{opacity:.45;filter:saturate(.5)}
+.btn.sq{width:56px;flex:none;padding:0;font-size:22px}
+.card{background:var(--surface);border:var(--bw) solid var(--cardb);border-radius:var(--r);padding:16px;margin:12px 0;box-shadow:var(--shadow)}
+label{display:block;font-size:14px;color:var(--mute);margin:12px 0 5px;font-weight:500}
+input,select{width:100%;min-height:48px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--ri);font:inherit;background:var(--field);color:var(--ink)}
+html[data-theme="tape"] input,html[data-theme="tape"] select{border:2px solid #101113}
+input:focus,select:focus{outline:none;border-color:var(--mark);box-shadow:0 0 0 3px color-mix(in srgb,var(--mark) 28%,transparent)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.chk{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:15px;color:var(--ink)}
-.chk input{width:22px;height:22px}
-.logo{display:flex;align-items:center;gap:10px;color:var(--teal-d);font-weight:800;letter-spacing:.3px}
+.chk{display:flex;align-items:center;gap:12px;margin-top:14px;font-size:15.5px;color:var(--ink)}
+.chk input{width:22px;height:22px;min-height:0;accent-color:var(--mark)}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--fh);font-weight:800;font-size:20px;letter-spacing:-.01em}
 .logo svg{width:34px;height:34px}
-.steps{display:flex;gap:6px;margin:4px 0 12px}
-.steps div{flex:1;text-align:center;font-size:12px;padding:8px 4px;border-radius:10px;background:#e8eef0;color:var(--mute);font-weight:600}
-.steps .cur{background:var(--teal);color:#fff}.steps .done{background:#bfe3df;color:var(--teal-d)}
+.mk-bg{fill:var(--accent)}.mk-fg{stroke:var(--accent-ink);fill:none}.mk-fd{fill:var(--accent-ink)}
+html[data-theme="pressure"] .mk-bg{fill:#FBBF24}
+.lookbtn{display:flex;align-items:center;gap:8px;background:var(--surface2);color:var(--ink);padding:9px 14px 9px 11px;font-size:14px;font-weight:600;border-radius:999px;border:var(--bw) solid var(--cardb)}
+.lookbtn svg{width:18px;height:18px}
+.rail{height:18px;margin:6px 0 4px;background:
+ repeating-linear-gradient(90deg,var(--rail) 0 1.5px,transparent 1.5px 9px) left bottom/100% 7px no-repeat,
+ repeating-linear-gradient(90deg,var(--rail) 0 1.5px,transparent 1.5px 45px) left bottom/100% 14px no-repeat}
+html[data-theme="pressure"] .rail{background:
+ repeating-linear-gradient(90deg,var(--rail) 0 1.5px,transparent 1.5px 9px) left bottom/100% 7px no-repeat,
+ repeating-linear-gradient(90deg,var(--rail) 0 1.5px,transparent 1.5px 45px) left bottom/100% 12px no-repeat,
+ var(--accent-grad) left top/100% 4px no-repeat}
+.lede{color:var(--mute);margin:8px 0 14px;max-width:46ch}
+.steps{display:flex;gap:8px;margin:2px 0 14px}
+.steps div{flex:1;text-align:left;font-size:13.5px;font-weight:600;color:var(--mute);padding:0 0 8px;border-bottom:5px solid var(--line);background:none}
+.steps .done{color:var(--ink);border-color:var(--accent-soft-ink);opacity:.9}.steps .cur{color:var(--ink);border-color:var(--mark)}
+html[data-theme="tape"] .steps div{border-color:#C8CBD0}html[data-theme="tape"] .steps .done{border-color:#101113}html[data-theme="tape"] .steps .cur{border-color:#FFC800;box-shadow:0 2px 0 #101113}
+html[data-theme="pressure"] .steps .cur{border-image:var(--accent-grad) 1}
 ol.instr{padding:0;margin:6px 0 0;list-style:none;counter-reset:n}
-ol.instr li{counter-increment:n;position:relative;padding:8px 0 8px 40px}
-ol.instr li::before{content:counter(n);position:absolute;left:0;top:8px;width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
+ol.instr li{counter-increment:n;position:relative;padding:9px 0 9px 44px}
+ol.instr li::before{content:counter(n);position:absolute;left:0;top:9px;width:30px;height:30px;border-radius:50%;background:var(--accent-grad);color:var(--accent-ink);border:var(--btnb);display:grid;place-items:center;font-size:14px;font-weight:700}
 .timeline{display:flex;gap:6px;font-size:13px;margin-top:8px}
-.timeline div{flex:1;background:#eef5f4;border-radius:10px;padding:8px 4px;text-align:center}
-.timeline b{display:block;font-size:16px}
+.timeline div{flex:1;background:var(--surface2);border-radius:calc(var(--ri) + 2px);padding:10px 4px;text-align:center;color:var(--mute)}
+.timeline b{display:block;font-size:17px;color:var(--ink)}
+.diagram{background:var(--figure);border-color:transparent}
 .diagram svg{width:100%;height:auto;display:block}
-.orient{display:inline-block;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600}
-#toast{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 90px);background:#0f172a;color:#fff;padding:12px 16px;border-radius:12px;z-index:50;display:none;font-size:14px}
+.orient{display:inline-block;background:var(--warnbg);color:var(--warn);border-radius:999px;padding:5px 13px;font-size:13.5px;font-weight:650}
+.dock{position:sticky;bottom:0;z-index:5;margin:20px -16px -28px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--dock);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+.dock .btn{margin-top:0}.dock .btn+.btn,.dock .dockrow+.btn{margin-top:8px}
+.dockrow{display:flex;gap:10px}.dockrow .btn{flex:1}.dockrow .btn.sq{flex:none}
+.trow{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:12px 2px;color:var(--ink)}
+.trow:first-child{border-top:0}
+.trow .ti{width:42px;height:42px;border-radius:calc(var(--ri) + 2px);background:var(--accent-soft);color:var(--accent-soft-ink);display:grid;place-items:center;flex:none}
+html[data-theme="tape"] .trow .ti{background:#FFC800;color:#101113;border:2px solid #101113}
+.trow .ti svg{width:24px;height:24px}
+.trow .tt{flex:1;min-width:0;font-weight:650;line-height:1.25}.trow .tt small{display:block;font-weight:400;color:var(--mute);font-size:13px}
+.trow .tc{color:var(--mute);font-size:20px}.trow .tc.on{color:var(--ok);font-weight:800}
+.sheet{position:fixed;inset:0;z-index:70;display:none}.sheet.open{display:block}
+.sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+.sheet-body{position:absolute;left:0;right:0;bottom:0;max-width:640px;margin:0 auto;background:var(--surface);color:var(--ink);border-radius:var(--r) var(--r) 0 0;padding:20px 16px calc(18px + env(safe-area-inset-bottom));max-height:88dvh;overflow:auto;animation:sheetup .22s ease-out}
+@keyframes sheetup{from{transform:translateY(28px);opacity:0}}
+.lk{display:flex;gap:14px;align-items:center;width:100%;text-align:left;background:var(--surface2);border:2px solid transparent;border-radius:var(--r);padding:12px;margin-top:10px;color:var(--ink)}
+.lk[aria-pressed="true"]{border-color:var(--mark)}
+.lk b{display:block;font-family:var(--fh);font-size:18px}.lk small{color:var(--mute);font-size:13.5px;line-height:1.3;display:block}
+.pv{width:84px;height:60px;border-radius:10px;flex:none;position:relative;overflow:hidden;border:1px solid rgba(128,128,128,.35);display:block}
+.pv i{position:absolute;left:8px;top:8px;width:34px;height:7px;border-radius:3px}
+.pv u{position:absolute;left:8px;height:11px;border-radius:4px;width:68px;text-decoration:none}
+.pv s{position:absolute;right:8px;bottom:8px;width:22px;height:11px;border-radius:5px}
+#toast{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 96px);background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:var(--ri);z-index:80;display:none;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 #loader{position:fixed;inset:0;background:#0f172ae6;color:#fff;display:none;place-content:center;text-align:center;z-index:60;font-size:18px;padding:20px}
 /* camera */
 #cam{position:fixed;inset:0;background:#000;color:#fff;min-height:0;padding:0}
@@ -66,7 +133,7 @@ ol.instr li::before{content:counter(n);position:absolute;left:0;top:8px;width:28
 .bar i{display:block;height:100%;background:#22c55e;width:0}
 #status{flex:1;min-width:0;font-size:13px;line-height:1.25}
 .pill.bad{background:#b91c1ccc}
-.iconbtn.on{background:#0f766ecc}
+.iconbtn.on{background:var(--accent);color:var(--accent-ink)}
 .tilt{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 68px);z-index:3;font-size:13px;padding:6px 12px;white-space:nowrap;display:none}
 .lvl{position:absolute;left:50%;top:50%;width:0;height:0;z-index:2;pointer-events:none;display:none}
 .lvl i{position:absolute;left:-90px;width:180px;height:3px;margin-top:-1.5px;border-radius:2px;background:#4ade80;transition:transform .1s linear,background .2s}
@@ -74,16 +141,17 @@ ol.instr li::before{content:counter(n);position:absolute;left:0;top:8px;width:28
 .lvl s{position:absolute;top:-1px;width:16px;height:2px;background:#fff9}
 .lvl s.a{left:-112px}.lvl s.b{left:96px}
 /* review & results */
-video.rv{width:100%;max-height:60vh;background:#000;border-radius:12px}
-.row{display:flex;justify-content:space-between;gap:12px;padding:10px 0 10px 10px;border-top:1px solid var(--line);border-left:4px solid transparent}
+video.rv{width:100%;max-height:60vh;background:#000;border-radius:var(--ri)}
+.row{display:flex;justify-content:space-between;gap:14px;padding:12px 0 12px 12px;border-top:1px solid var(--line);border-left:4px solid transparent}
 .row:first-of-type{border-top:0}
-.row .l{font-weight:600}.row small{display:block;color:var(--mute);font-size:12px;font-weight:400}
-.row .v{font-weight:700;text-align:right;align-self:center}
-.row.ok{border-left-color:#22c55e}.row.warn{border-left-color:#f59e0b}.row.bad{border-left-color:#ef4444}
+.row .l{font-weight:600;line-height:1.3}.row small{display:block;color:var(--mute);font-size:12.5px;font-weight:400;line-height:1.3;margin-top:2px}
+.row .v{font-weight:700;text-align:right;align-self:center;font-size:17px;font-variant-numeric:tabular-nums;max-width:48%}
+.row .v.nw{white-space:nowrap}
+.row.ok{border-left-color:var(--ok)}.row.warn{border-left-color:var(--warn)}.row.bad{border-left-color:var(--bad)}
 .row.ok .v{color:var(--ok)}.row.warn .v{color:var(--warn)}.row.bad .v{color:var(--bad)}
-.chip{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+.chip{display:inline-block;border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:700}
 .chip.ok{background:var(--okbg);color:var(--ok)}.chip.warn{background:var(--warnbg);color:var(--warn)}.chip.bad{background:var(--badbg);color:var(--bad)}
-img.snap{width:100%;max-height:420px;object-fit:contain;background:#0f172a;border-radius:12px;display:block}
+img.snap{width:100%;max-height:420px;object-fit:contain;background:#0b1220;border-radius:var(--ri);display:block}
 .obs li{margin:4px 0}
 .grid-btn{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .disc{font-size:12px;color:var(--mute);border-top:1px dashed var(--line);margin-top:14px;padding-top:10px}
@@ -91,17 +159,17 @@ img.snap{width:100%;max-height:420px;object-fit:contain;background:#0f172a;borde
 .mk-row svg{width:132px;height:auto;flex:none}
 #mk-ins{font-size:15px}
 .mk-stage{position:relative;margin:10px 0;touch-action:none;-webkit-user-select:none;user-select:none}
-#mk-cv{width:100%;height:auto;display:block;border-radius:12px;background:#000;touch-action:none}
+#mk-cv{width:100%;height:auto;display:block;border-radius:var(--ri);background:#000;touch-action:none}
 #mk-loupe{position:absolute;width:112px;height:112px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 14px #0009;display:none;pointer-events:none;background:#000}
 .fpi table{width:100%;border-collapse:collapse;font-size:14px}
 .fpi th,.fpi td{padding:7px 4px;border-top:1px solid var(--line);text-align:left;vertical-align:middle}
-.fpi th{font-size:12px;color:var(--mute);border-top:0}
-.fpi select{padding:6px;font-size:14px;width:72px}
+.fpi th{font-size:13px;color:var(--mute);border-top:0}
+.fpi select{padding:6px;font-size:14px;width:72px;min-height:40px}
 .fpi small{display:block;color:var(--mute);font-size:11px}
-details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
+details summary{cursor:pointer;color:var(--link);font-weight:650;margin:8px 0;min-height:32px}
 #proc{position:fixed;inset:0;background:#0f172af2;color:#fff;display:none;place-content:center;text-align:center;z-index:61;padding:24px;gap:12px}
 #proc .bar2{height:8px;background:#fff3;border-radius:6px;overflow:hidden;width:min(320px,80vw);margin:6px auto}
-#proc .bar2 i{display:block;height:100%;background:#22d3ee;width:0}
+#proc .bar2 i{display:block;height:100%;background:var(--mark);width:0}
 #proc button{background:#fff2;color:#fff;margin-top:10px}
 .gf{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
 .gf.wide{grid-template-columns:repeat(2,1fr)}
@@ -109,10 +177,32 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
 .gf img{width:100%;display:block;border-radius:8px;background:#0f172a}
 .gf figcaption{font-size:11px;text-align:center;line-height:1.25;margin-top:2px}
 .gf figcaption span{display:block;color:var(--mute)}
-.lg{font-size:12px;font-weight:700;margin:6px 0 0}.lg .l{color:#0891b2}.lg .r{color:#c2410c}
+.lg{font-size:12.5px;font-weight:700;margin:6px 0 0}.lg .l{color:#0891b2}.lg .r{color:#ea7a2d}
 .signbox{display:none}
 .split{display:flex;flex-direction:column}.split .pic{order:-1}
+@media screen{
+ html[data-theme="tape"] .hero{background:#FFC800;border:2px solid #101113;border-radius:8px;padding:6px 16px 8px;box-shadow:4px 4px 0 #101113;margin-top:14px}
+ html[data-theme="tape"] .hero .lede{color:#101113}
+ html[data-theme="tape"] .card{box-shadow:4px 4px 0 #101113}
+ html[data-theme="tape"] .logo{font-size:24px}
+ html[data-theme="tape"] .chip{border:1.5px solid currentColor}
+ html[data-theme="radiograph"] .pic,html[data-theme="radiograph"] .mk-stage{position:relative}
+ html[data-theme="radiograph"] .pic::after,html[data-theme="radiograph"] .mk-stage::after{content:"";position:absolute;inset:7px;pointer-events:none;background:
+  linear-gradient(var(--accent),var(--accent)) left top/16px 1.5px no-repeat,linear-gradient(var(--accent),var(--accent)) left top/1.5px 16px no-repeat,
+  linear-gradient(var(--accent),var(--accent)) right top/16px 1.5px no-repeat,linear-gradient(var(--accent),var(--accent)) right top/1.5px 16px no-repeat,
+  linear-gradient(var(--accent),var(--accent)) left bottom/16px 1.5px no-repeat,linear-gradient(var(--accent),var(--accent)) left bottom/1.5px 16px no-repeat,
+  linear-gradient(var(--accent),var(--accent)) right bottom/16px 1.5px no-repeat,linear-gradient(var(--accent),var(--accent)) right bottom/1.5px 16px no-repeat}
+ html[data-theme="radiograph"] .card{background:linear-gradient(180deg,var(--surface),#0E1823)}
+ html[data-theme="pressure"] .card{background:linear-gradient(180deg,var(--surface),#18132B)}
+ html[data-theme="pressure"] .btn.sec{background:var(--surface2);color:var(--ink)}
+ html[data-theme="pressure"] .chip.ok,html[data-theme="pressure"] .chip.warn,html[data-theme="pressure"] .chip.bad{border:1px solid currentColor}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media print{
+ html,html[data-theme]{--bg:#fff;--surface:#fff;--surface2:#EEF3F2;--ink:#13211E;--mute:#5A6B67;--line:#DAE4E1;--cardb:#CBD5E1;--bw:1px;--accent:#0B6E6E;--accent-ink:#fff;--accent-grad:#0B6E6E;--accent-soft:#DCEFEC;--accent-soft-ink:#095858;--mark:#0B6E6E;--link:#095858;
+  --r:14px;--rb:10px;--ri:10px;--font:'Figtree',system-ui,sans-serif;--fh:'Figtree',system-ui,sans-serif;--hw:700;--h1ls:-.01em;--shadow:none;--field:#fff;--rail:#8FA6A1;--figure:#EEF3F2;
+  --ok:#15803d;--okbg:#dcfce7;--warn:#a85a08;--warnbg:#fef0c7;--bad:#b91c1c;--badbg:#fee2e2}
+ .pic::after{display:none!important}.dock{position:static!important;background:none!important;border:0!important;padding:0!important;margin:0!important}
  @page{size:A4;margin:12mm}
  html,body{background:#fff;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
  .noprint,#toast,#loader,#proc{display:none!important}
@@ -125,7 +215,7 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
  .split .vals h3:first-child{margin-top:0!important}
  img.snap{max-height:520px;width:auto;max-width:100%;display:block;margin-left:auto;border-radius:6px}
  .card h2,.card h3{break-after:avoid}
- .row{padding:5px 0 5px 8px;break-inside:avoid}.row small{font-size:10px}
+ .row{padding:5px 0 5px 8px;break-inside:avoid}.row .v{font-size:14px}.row small{font-size:10px}
  .gfw{break-inside:avoid}
  #r-views>.card{break-inside:auto}
  .gf,.gf.wide{grid-template-columns:repeat(6,1fr)}.gf figure.big{grid-column:auto}
@@ -140,9 +230,12 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
 <!-- HOME -->
 <section id="home" class="screen active">
  <div class="wrap">
-  <div class="logo"><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0f766e"/><circle cx="32" cy="14" r="6" fill="#fff"/><path d="M32 22v18M32 40l-9 16M32 40l9 16M32 28l-12 8M32 28l12 8" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/></svg>FOOTSCOPE</div>
-  <h1>Posture & gait screening</h1>
-  <p class="mute">Record three short videos — front, side and back — and get knee, ankle, foot, posture and walking measurements.</p>
+  <div class="topline"><div class="logo"><svg viewBox="0 0 64 64" aria-hidden="true"><rect class="mk-bg" width="64" height="64" rx="14"/><circle class="mk-fd" cx="32" cy="14" r="6"/><path class="mk-fg" d="M32 22v18M32 40l-9 16M32 40l9 16M32 28l-12 8M32 28l12 8" stroke-width="4" stroke-linecap="round"/></svg>FootScope</div><button class="lookbtn" aria-label="Change the look of the app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.8 0-1.2-1-1.4-1-2.5 0-.9.7-1.7 1.7-1.7H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>Look</button></div>
+  <div class="hero">
+   <h1>Posture and gait screening</h1>
+   <div class="rail" aria-hidden="true"></div>
+   <p class="lede">Record front, side and back videos, add foot photos, and get a printable report of knee, ankle, foot and walking measurements.</p>
+  </div>
 
   <div class="card">
    <h3>Patient</h3>
@@ -162,22 +255,23 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
    <p class="small mute">Height is used to convert measurements into centimetres. Without it, only angles are reported.</p>
   </div>
 
+
   <div class="card">
-   <h3>Recording options</h3>
+   <h3>Recording</h3>
    <label for="o-cam">Camera</label>
    <select id="o-cam"><option value="environment">Rear camera (recommended)</option><option value="user">Front camera (self-recording)</option></select>
    <label class="chk"><input id="o-voice" type="checkbox" checked> Voice prompts (“Stand still”, “Walk”)</label>
   </div>
 
   <div class="card">
-   <h3>More tests (optional)</h3>
-   <p class="small mute" style="margin-top:0">Balance on one leg, sit-to-stand, stairs and running. Each is recorded on its own and added to the report.</p>
-   <div class="grid-btn" id="home-tests"></div>
+   <h3>Add-on tests</h3>
+   <p class="small mute" style="margin-top:0">Each test is recorded on its own and added to the report.</p>
+   <div id="home-tests"></div>
   </div>
 
-  <button class="btn" id="btn-start">Start assessment</button>
-  <p class="small mute" style="text-align:center">Videos and measurements stay on this phone. Nothing is uploaded.</p>
+  <p class="small mute">Videos and measurements stay on this phone. Nothing is uploaded.</p>
   <p class="disc">FootScope is a screening aid based on 2-D camera pose estimation. It does not diagnose any condition. Results depend on camera position, lighting and clothing, and should be confirmed by clinical examination.</p>
+  <div class="dock"><button class="btn" id="btn-start">Start assessment</button></div>
  </div>
 </section>
 
@@ -191,11 +285,9 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
   <div class="card"><h3>Set-up</h3><ol class="instr" id="b-list"></ol>
    <p class="small mute" style="margin-top:8px">On the camera screen a <b>level line</b> shows whether the phone is straight — aim for green. The <b>∠</b> button shows live joint angles.</p></div>
   <div class="card"><h3>What the recording does</h3><div class="timeline" id="b-time"></div></div>
-  <button class="btn" id="btn-open">Open camera</button>
-  <button class="btn sec" id="btn-gal">Choose video from gallery</button>
   <input type="file" id="f-vid" accept="video/*" hidden>
-  <p class="small mute" style="margin:4px 0 0">Gallery video: it should start with about 5 seconds standing still, then the walk, with the whole body in view.</p>
-  <button class="btn ghost" id="btn-brief-back">← Back</button>
+  <p class="small mute" style="margin:4px 0 0">Gallery video: it should start with a few seconds standing still, then the movement, with the whole body in view.</p>
+  <div class="dock"><div class="dockrow"><button class="btn ghost sq" id="btn-brief-back" aria-label="Back">←</button><button class="btn" id="btn-open">Open camera</button></div><button class="btn sec" id="btn-gal">Choose video from gallery</button></div>
  </div>
 </section>
 
@@ -236,9 +328,7 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
    </div>
   </div>
   <div class="card"><h3>Quick readings</h3><div id="rv-rows"></div></div>
-  <button class="btn" id="btn-next"></button>
-  <button class="btn sec" id="btn-retake">Retake this view</button>
-  <button class="btn ghost" id="btn-skipfoot" style="display:none">Skip foot close-ups → results</button>
+  <div class="dock"><button class="btn" id="btn-next"></button><button class="btn sec" id="btn-retake">Retake this view</button><button class="btn ghost" id="btn-skipfoot" style="display:none">Skip foot close-ups and see results</button></div>
  </div>
 </section>
 
@@ -249,9 +339,8 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
   <h2 style="margin-top:2px">Crop the photo</h2>
   <p class="small mute" id="cr-hint" style="margin:0 0 6px"></p>
   <div class="mk-stage"><canvas id="cr-cv"></canvas></div>
-  <button class="btn" id="cr-use">Use this crop</button>
-  <div class="grid-btn"><button class="btn sec" id="cr-auto">Auto-crop again</button><button class="btn sec" id="cr-full">Use whole photo</button></div>
-  <button class="btn ghost" id="cr-back">← Retake / change photo</button>
+  <div class="dock"><div class="dockrow"><button class="btn ghost sq" id="cr-back" aria-label="Retake or change photo">←</button><button class="btn" id="cr-use">Use this crop</button></div>
+   <div class="grid-btn" style="margin-top:8px"><button class="btn sec" id="cr-auto" style="margin-top:0">Auto-crop again</button><button class="btn sec" id="cr-full" style="margin-top:0">Use whole photo</button></div></div>
  </div>
 </section>
 
@@ -262,10 +351,7 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
   <h2 id="fb-title"></h2>
   <div class="card diagram" id="fb-diagram"></div>
   <div class="card"><h3>How to take the photo</h3><ol class="instr" id="fb-list"></ol></div>
-  <button class="btn" id="fb-cam">📷 Take photo</button>
-  <button class="btn sec" id="fb-gal">Choose from gallery</button>
-  <button class="btn ghost" id="fb-skip">Skip this photo</button>
-  <button class="btn ghost" id="fb-back">← Back</button>
+  <div class="dock"><div class="dockrow"><button class="btn ghost sq" id="fb-back" aria-label="Back">←</button><button class="btn" id="fb-cam">Take photo</button></div><div class="grid-btn" style="margin-top:8px"><button class="btn sec" id="fb-gal" style="margin-top:0">Choose from gallery</button><button class="btn ghost" id="fb-skip" style="margin-top:0">Skip this photo</button></div></div>
   <input type="file" id="f-cam" accept="image/*" capture="environment" hidden>
   <input type="file" id="f-gal" accept="image/*" hidden>
  </div>
@@ -291,36 +377,36 @@ details summary{cursor:pointer;color:var(--teal-d);font-weight:600;margin:8px 0}
   <div class="mk-stage"><canvas id="mk-cv"></canvas><canvas id="mk-loupe" width="224" height="224"></canvas></div>
   <p class="small mute" style="margin:4px 0 8px">Tap the photo to place each point. Keep your finger down to see the magnifier and slide to the exact spot. Drag any point to adjust it.</p>
   <div class="grid-btn"><button class="btn sec" id="mk-undo">Undo point</button><button class="btn sec" id="mk-reset">Clear all</button></div>
-  <button class="btn" id="mk-done" disabled>Save measurements</button>
-  <button class="btn ghost" id="mk-retake">← Retake / change photo</button>
+  <div class="dock"><div class="dockrow"><button class="btn ghost sq" id="mk-retake" aria-label="Retake or change photo">←</button><button class="btn" id="mk-done" disabled>Save measurements</button></div></div>
  </div>
 </section>
 
 <!-- RESULTS -->
 <section id="results" class="screen">
  <div class="wrap">
-  <div class="logo"><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0f766e"/><circle cx="32" cy="14" r="6" fill="#fff"/><path d="M32 22v18M32 40l-9 16M32 40l9 16M32 28l-12 8M32 28l12 8" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/></svg>FOOTSCOPE · Report</div>
-  <div class="card" id="r-pat"></div>
+  <div class="topline"><div class="logo"><svg viewBox="0 0 64 64" aria-hidden="true"><rect class="mk-bg" width="64" height="64" rx="14"/><circle class="mk-fd" cx="32" cy="14" r="6"/><path class="mk-fg" d="M32 22v18M32 40l-9 16M32 40l9 16M32 28l-12 8M32 28l12 8" stroke-width="4" stroke-linecap="round"/></svg>FootScope</div><button class="lookbtn noprint" aria-label="Change the look of the app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.8 0-1.2-1-1.4-1-2.5 0-.9.7-1.7 1.7-1.7H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>Look</button></div>
+  <div class="card hero" id="r-pat"></div>
   <div class="card" id="r-obs"></div>
   <div id="r-views"></div>
   <div id="r-tests"></div>
   <div id="r-foot"></div>
   <div id="r-fpi"></div>
-  <div class="card noprint" id="r-addtest"><h3>Add a test</h3><div class="grid-btn" id="r-testbtns"></div></div>
+  <div class="card noprint" id="r-addtest"><h3>Add a test</h3><div id="r-testbtns"></div></div>
   <div class="signbox"><div>Examiner</div><div>Signature</div><div>Date</div></div>
   <p class="disc">Screening aid based on 2-D video pose estimation (MediaPipe). Not a diagnosis. Reference ranges are approximate; confirm findings with clinical examination and, where needed, imaging or gait-lab assessment.</p>
   <div class="noprint">
-   <button class="btn" id="btn-print">Save / print PDF report</button>
    <div class="grid-btn">
     <button class="btn sec" id="btn-videos">Download videos</button>
     <button class="btn sec" id="btn-json">Download data (JSON)</button>
    </div>
    <button class="btn ghost" id="btn-new">Start new patient</button>
   </div>
+  <div class="dock noprint"><button class="btn" id="btn-print">Save or print PDF report</button></div>
  </div>
 </section>
 
 <div id="proc"><div style="font-size:18px;font-weight:700" id="proc-txt">Analysing video…</div><div class="bar2"><i id="proc-fill"></i></div><div class="small" style="opacity:.75">Keep this page open</div><div><button id="proc-cancel">Cancel</button></div></div>
+<div class="sheet" id="look" role="dialog" aria-modal="true" aria-label="Choose a look"><div class="sheet-bg" id="look-bg"></div><div class="sheet-body"><h3>Choose a look</h3><p class="small mute" style="margin:0">Applies on this phone only. Printed reports always use the plain clinic layout.</p><div id="look-list"></div><button class="btn ghost" id="look-close">Close</button></div></div>
 <div id="toast"></div>
 <div id="loader"><div>Loading analysis engine…<div class="small" style="opacity:.7;margin-top:8px">First load needs internet (about 10 MB)</div></div></div>
 
@@ -672,7 +758,7 @@ function balanceRows(stance, act, meta, H) {
   let i1 = fr.length - 1;
   for (let i = i0; i < fr.length; i++) { if (up[i]) continue; let j = i; while (j < fr.length && !up[j]) j++; if (j >= fr.length || fr[j - 1].t - fr[i].t >= 0.4) { i1 = i - 1; break; } i = j; }
   const hold = fr[i1].t - fr[i0].t, seg = fr.slice(i0, i1 + 1), R = [], vals = { hold, win };
-  R.push(row('Time held on one leg', `${f1(hold)} s of ${f1(win)} s`, 'Under 5 s is linked with higher fall risk in older adults · holding the whole test is expected for most adults',
+  R.push(row('Time held on one leg', `${f1(hold)} s`, `Test window ${f1(win)} s · under 5 s is linked with higher fall risk in older adults · holding the whole test is expected for most adults`,
     hold >= 0.9 * win ? 'ok' : hold >= 5 ? 'warn' : 'bad'));
   if (seg.length >= 10 && hold >= 1.5) {
     const cm = H ? 0.30 * H / tm : null, unit = cm ? 'cm' : '% of trunk', k = cm || 100 / tm;
@@ -991,10 +1077,39 @@ async function startTest(key, from) {
   S.test = TESTS.find(t => t.key === key); S.back = from;
   renderBrief(); show('brief');
 }
+const T_ICO = {
+  bal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"/><path d="M12 7.5v6M12 13.5v7M12 13.5l5.5 2M12 9.5l-4 1.5M12 9.5l4 1.5"/></svg>',
+  sts: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.5v9.5h10M8 13v7.5M16 13v7.5M17 13l1.5-5"/></svg>',
+  stairs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h5v-4.5h5v-4.5h5V7h2.5"/></svg>',
+  run: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="14.5" cy="4.5" r="2"/><path d="M9.5 9.5l4-1.5 3 3.5 3.5.5M12.5 8l-2.5 5.5-3.5 3M11 13.5l3.5 3 1 4"/></svg>'
+};
+const T_UI = {
+  balL: ['bal', 'Balance, left leg', 'Stand on the left leg for 15 s'], balR: ['bal', 'Balance, right leg', 'Stand on the right leg for 15 s'],
+  sts: ['sts', 'Sit-to-stand', 'Five stands from a chair'], stairs: ['stairs', 'Stair climb', 'Climb at a natural pace'], run: ['run', 'Running', 'Past the phone or on a treadmill']
+};
 function testButtons(el, from) {
-  el.innerHTML = TESTS.map(t => `<button class="btn sec" data-t="${t.key}">${esc(t.short)}${S.data[t.key] ? ' ✓' : ''}</button>`).join('');
+  el.innerHTML = TESTS.map(t => { const u = T_UI[t.key]; return `<button class="trow" data-t="${t.key}"><span class="ti">${T_ICO[u[0]]}</span><span class="tt">${esc(u[1])}<small>${esc(u[2])}</small></span>${S.data[t.key] ? '<span class="tc on" aria-label="Recorded">✓</span>' : '<span class="tc" aria-hidden="true">›</span>'}</button>`; }).join('');
   el.querySelectorAll('button').forEach(b => b.onclick = () => startTest(b.dataset.t, from));
 }
+/* ---------- looks (visual templates) ---------- */
+const LOOKS = [
+  { id: 'clinic', name: 'Clinic', desc: 'Bright and calm. Best in daylight rooms.', bg: '#F3F6F5', card: '#FFFFFF', ac: '#0B6E6E' },
+  { id: 'tape', name: 'Tape', desc: 'Measuring-tape yellow and black. Bold and easy to read at arm’s length.', bg: '#E8E9EB', card: '#FFFFFF', ac: '#FFC800' },
+  { id: 'radiograph', name: 'Radiograph', desc: 'Dark blue-black with cool cyan lines. Easy on the eyes in a dim room.', bg: '#080E15', card: '#101A26', ac: '#6FD3F7' },
+  { id: 'pressure', name: 'Pressure map', desc: 'Deep indigo with a heat-map accent. Dark and lively.', bg: '#120E1E', card: '#1C1730', ac: 'linear-gradient(90deg,#3B82F6,#22C55E,#FACC15,#EF4444)' }
+];
+function applyLook(id, save) {
+  const l = LOOKS.find(x => x.id === id) || LOOKS[0];
+  document.documentElement.dataset.theme = l.id; $('#meta-theme').content = l.bg;
+  if (save) { try { localStorage.setItem('footscope-theme', l.id); } catch (e) {} }
+  $('#look-list').innerHTML = LOOKS.map(x => `<button class="lk" data-l="${x.id}" aria-pressed="${x.id === l.id}"><span class="pv" style="background:${x.bg}"><i style="background:${x.ac}"></i><u style="top:22px;background:${x.card}"></u><u style="top:37px;width:44px;background:${x.card}"></u><s style="background:${x.ac}"></s></span><span><b>${x.name}</b><small>${esc(x.desc)}</small></span></button>`).join('');
+  document.querySelectorAll('#look-list .lk').forEach(b => b.onclick = () => applyLook(b.dataset.l, true));
+}
+applyLook(document.documentElement.dataset.theme, false);
+const lookOpen = o => $('#look').classList.toggle('open', o);
+document.querySelectorAll('.lookbtn').forEach(b => b.onclick = () => lookOpen(true));
+$('#look-close').onclick = $('#look-bg').onclick = () => lookOpen(false);
+window.addEventListener('keydown', e => { if (e.key === 'Escape') lookOpen(false); });
 testButtons($('#home-tests'), 'home');
 
 /* ---------- brief ---------- */
@@ -1442,7 +1557,7 @@ $('#btn-skipfoot').onclick = () => { $('#rv-video').pause(); renderResults(); };
 
 /* ---------- results ---------- */
 function rowHtml(r) {
-  return `<div class="row ${r.status}"><div class="l">${esc(r.label)}${r.ref ? `<small>${esc(r.ref)}</small>` : ''}</div><div class="v">${esc(r.value)}</div></div>`;
+  return `<div class="row ${r.status}"><div class="l">${esc(r.label)}${r.ref ? `<small>${esc(r.ref)}</small>` : ''}</div><div class="v${String(r.value).length <= 18 ? ' nw' : ''}">${esc(r.value)}</div></div>`;
 }
 function label(g, text, x, y, h, col) {
   const fs = Math.max(14, h / 38); g.font = `700 ${fs}px system-ui,sans-serif`;

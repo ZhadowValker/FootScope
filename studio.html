@@ -143,6 +143,40 @@ dialog{max-height:94vh;overflow:auto}
 .r-good{list-style:none;margin:0;padding:0}.r-good li{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #e3e9e8;padding:5px 0}.r-good b{font-size:12px}.r-good span{font-family:'JetBrains Mono',monospace;color:#0a8f72;font-size:12px;white-space:nowrap}
 .r-lr{margin-bottom:8px;font-size:11.5px}.r-lr>div:first-child{display:flex;justify-content:space-between}.r-lr i{font-style:normal;color:#667}
 .r-l,.r-r{height:6px;background:#e6ecec;margin-top:3px}.r-l u,.r-r u{display:block;height:100%}.r-l u{background:#0a8f72}.r-r u{background:#d9560f}
+
+/* dashboard button */
+.rtbtn{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;align-items:center;width:100%;text-align:left;padding:14px 18px;margin-bottom:12px;background:linear-gradient(90deg,#10302a,#0b1c1a);border:1px solid var(--mint);color:var(--tx)}
+.rtbtn:hover{background:linear-gradient(90deg,#14403a,#0d2421)}.rtbtn i{grid-row:1/3;width:14px;height:14px;border-radius:50%;background:#ff5a4a;box-shadow:0 0 0 5px #ff5a4a33}
+.rtbtn b{font-size:20px;font-weight:600;letter-spacing:.01em}.rtbtn span{font-size:13px;color:var(--dim)}
+/* runtime analysis */
+#rt{position:fixed;inset:0;z-index:30;background:#05090a;color:var(--tx);display:flex;flex-direction:column}
+#rt[hidden]{display:none}
+.rt-main{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#000}
+.rt-vw{position:relative}.rt-vw video,.rt-vw canvas{position:absolute;inset:0;width:100%;height:100%}.rt-vw video{object-fit:fill;background:#000}
+.rt-top{position:absolute;left:12px;right:12px;top:10px;display:flex;gap:8px;align-items:center;z-index:3}
+.rt-pill{padding:5px 11px;background:#05090acc;border:1px solid var(--ln2);font-size:13px;font-weight:600}.rt-pill.dim{color:var(--dim)}.rt-pill.ok{color:var(--mint);border-color:var(--mint)}
+.rt-pill.rec{background:#ff3b30;border-color:#ff3b30;color:#fff;animation:rtp 1.4s ease-in-out infinite}@keyframes rtp{50%{opacity:.65}}
+.rt-clock{padding:5px 10px;background:#05090acc;border:1px solid var(--ln2);font-size:15px;font-variant-numeric:tabular-nums}
+.rt-l{position:absolute;left:12px;top:52px;bottom:12px;width:206px;overflow:auto;display:flex;flex-direction:column;gap:6px;z-index:2}
+.rt-r{position:absolute;right:12px;top:52px;bottom:12px;width:214px;overflow:auto;display:flex;flex-direction:column;gap:6px;z-index:2}
+.rt-tile,.rt-card{background:#05090ad9;border:1px solid var(--ln);border-left:3px solid #5e8a80;padding:7px 10px}
+.rt-tile.ok{border-left-color:#7fe3c4}.rt-tile.watch{border-left-color:#f0c05a}.rt-tile.flag{border-left-color:#ff7a59}
+.rt-tile .k,.rt-h{font-size:12px;color:var(--dim)}.rt-tile .v{display:flex;align-items:baseline;gap:9px;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;font-variant-numeric:tabular-nums}
+.rt-tile .v .l{color:#7fe3c4}.rt-tile .v .r{color:#ff9d6e}.rt-tile .v small{font-size:12px;color:var(--dim)}.rt-tile .na{color:#5e7a72}
+.rt-hint{font-size:12.5px;color:var(--dim);padding:6px 4px;margin:4px 0}
+.rt-card canvas{display:block;width:100%;height:auto;margin-top:4px}
+.rt-arch{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-top:5px;padding-left:7px;border-left:3px solid #5e8a80}.rt-arch.ok{border-color:#7fe3c4}.rt-arch.watch{border-color:#f0c05a}.rt-arch.flag{border-color:#ff7a59}.rt-arch b{font-family:'JetBrains Mono',monospace;font-weight:500;white-space:nowrap}
+.rt-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:min(440px,86%);padding:16px 20px;background:#05090af2;border:1px solid var(--mint);text-align:center;z-index:5;font-size:15px}
+.rt-strip{display:flex;gap:6px;padding:6px 10px;overflow-x:auto;background:#070d0e;border-top:1px solid var(--ln);min-height:0}.rt-strip:empty{display:none}
+.rt-strip figure{margin:0;flex:none;width:110px}.rt-strip img{display:block;width:110px;height:62px;object-fit:cover;border:1px solid var(--ln2)}.rt-strip figcaption{font-size:10.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt-bar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:#070d0e;border-top:1px solid var(--ln2)}
+.rt-seg{display:flex}.rt-seg button{height:44px;padding:0 16px;border:1px solid var(--ln2);background:#0c1716;font-weight:600;margin-left:-1px}.rt-seg button.on{background:var(--mint);color:#06130f;border-color:var(--mint)}
+.rt-rec{height:52px;padding:0 26px;display:inline-flex;align-items:center;gap:10px;background:#ff3b30;border:0;color:#fff;font-size:17px;font-weight:700}.rt-rec i{width:14px;height:14px;border-radius:50%;background:#fff}.rt-rec.on i{border-radius:2px}
+@media(max-width:820px){.rt-l{width:auto;right:12px;top:48px;bottom:auto;max-height:38%;flex-direction:row;flex-wrap:wrap;overflow:auto}.rt-l .rt-tile{flex:1 1 120px}.rt-r{display:none}.rt-tile .v{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.rt-pill.rec{animation:none}}
+/* report: live session */
+.r-live{padding-top:18px;break-before:page}.r-h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin:16px 0 8px}
+.r-gal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.r-gal figure{margin:0;border:1px solid #cfd8d6;background:#0b1413;break-inside:avoid}.r-gal img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}.r-gal figcaption{padding:4px 7px;font-size:10px;color:#cfe;line-height:1.35;font-family:'JetBrains Mono',monospace}.r-gal b{font-weight:600}
 </style></head><body>
 <div id="app">
 <header>
@@ -178,6 +212,7 @@ dialog{max-height:94vh;overflow:auto}
   </section>
 
   <section class="col" aria-label="Video and curves">
+    <button class="rtbtn" id="b-rt"><i></i><b>Runtime analysis</b><span>Live camera with every reading and the skeleton on screen. Everything is recorded into the report.</span></button>
     <div class="vwrap">
       <div class="stage" id="stage">
         <video id="vid" muted playsinline preload="auto"></video>
@@ -232,6 +267,28 @@ dialog{max-height:94vh;overflow:auto}
   </div>
   <div class="note mono" id="phMsg" style="margin-top:8px"></div>
 </div></dialog>
+<div id="rt" hidden>
+  <div class="rt-main" id="rtMain">
+    <div class="rt-vw" id="rtVw"><video id="rtv" muted playsinline></video><canvas id="rtc"></canvas></div>
+    <div class="rt-top"><span class="rt-pill" id="rtState">Live</span><span class="rt-clock mono" id="rtClock">0:00</span><span class="rt-pill dim" id="rtTrack">Starting camera</span><span class="sp" style="flex:1"></span><button class="btn sm" id="rtX">Close</button></div>
+    <aside class="rt-l" id="rtL" aria-label="Live readings"></aside>
+    <aside class="rt-r" aria-label="Live curves and arch">
+      <div class="rt-card"><div class="rt-h">Knee bend</div><canvas id="rtT1" width="400" height="90"></canvas></div>
+      <div class="rt-card"><div class="rt-h">Thigh swing</div><canvas id="rtT2" width="400" height="90"></canvas></div>
+      <div class="rt-card"><div class="rt-h">Ankle</div><canvas id="rtT3" width="400" height="90"></canvas></div>
+      <div class="rt-card" id="rtArch"></div>
+    </aside>
+    <div class="rt-msg" id="rtMsg"></div>
+  </div>
+  <div class="rt-strip" id="rtStrip" aria-label="Captured moments"></div>
+  <div class="rt-bar">
+    <div class="rt-seg" role="group" aria-label="Camera view"><button data-v="side" class="on">Side</button><button data-v="front">Front</button><button data-v="back">Back</button></div>
+    <button class="rt-rec" id="rtGo"><i></i><span>Record</span></button>
+    <button class="btn" id="rtSnap">Capture moment</button>
+    <button class="btn" id="rtPhoto">Photo for arch</button>
+    <label class="dim" style="font-size:13px"><input type="checkbox" id="rtSk" checked> Skeleton</label>
+  </div>
+</div>
 <div id="rview" hidden><div class="rbar"><button class="btn p" id="rPrint">Print</button><button class="btn" id="rClose">Close</button></div><div id="report"></div></div>
 <div class="toast mono" id="toast" hidden></div>
 
@@ -751,9 +808,13 @@ function updatePlayhead() {
 /* ----- player ----- */
 const vid = $('#vid'), ov = $('#ov'), ctx = ov.getContext('2d');
 const curFrame = () => Math.max(0, Math.round(vid.currentTime * FPS));
+function fixDur(v) {   // recordings from MediaRecorder report an endless length until the end is visited once
+  const go = () => { if (v.duration === Infinity) { const back = () => { v.removeEventListener('timeupdate', back); v.currentTime = 0; }; v.addEventListener('timeupdate', back); v.currentTime = 1e101; } };
+  if (v.readyState >= 1) go(); else v.addEventListener('loadedmetadata', go, { once: true });
+}
 function loadClip(i, keep) {
   St.active = i; const c = St.clips[i]; if (!c) return;
-  if (vid.dataset.src !== c.name + '|' + i) { vid.dataset.src = c.name + '|' + i; vid.src = c.url; vid.load(); }
+  if (vid.dataset.src !== c.name + '|' + i) { vid.dataset.src = c.name + '|' + i; vid.src = c.url; vid.load(); fixDur(vid); }
   ov.width = c.vw; ov.height = c.vh; $('#stage').style.setProperty('--ar', c.vw + '/' + c.vh); $('#mask').style.display = c.mask ? '' : 'none';
   $('#tagL').style.display = c.layout === 'both' ? '' : 'none'; $('#tagR').style.display = c.layout === 'both' ? '' : 'none';
   if (c.layout === 'both') { $('#tagL').textContent = 'SIDE'; $('#tagR').textContent = 'FRONT'; }
@@ -779,7 +840,7 @@ function drawOverlay() {
     const R = layoutRects(c), hot = new Set(REG[St.region].joints), sc = ov.width / 1280;
     for (const [view, [ox, w, h]] of Object.entries(R)) { const P = c.tracks[view]; if (!P) continue; const tt = Math.min(t, P.T - 1);
       const X = k => ox + P[k].x[tt] / (c.views[view].w) * w, Y = k => P[k].y[tt] / (c.views[view].h) * h;
-      const col = k => k % 2 ? '#e8590c' : '#00a884';   // odd landmark ids are the person's left
+      const col = k => k % 2 ? '#00a884' : '#e8590c';   // odd landmark ids are the person's left (teal), even the right (orange)
       ctx.lineCap = 'round'; ctx.lineWidth = 3 * sc;
       for (const [a, b] of EDG) { const on = hot.has(a) || hot.has(b); ctx.strokeStyle = on ? (col(a) === col(b) ? col(a) : '#444') : 'rgba(80,110,105,.45)'; ctx.lineWidth = (on ? 4.5 : 2.5) * sc;
         ctx.beginPath(); ctx.moveTo(X(a), Y(a)); ctx.lineTo(X(b), Y(b)); ctx.stroke(); }
@@ -911,10 +972,10 @@ const PH_BACK = [['Lcalf', 'Left leg (left of the picture): middle of the lower 
 const PH_FRONT = [['Rankle', 'Right leg (left of the picture): middle of the ankle, at the cuff'], ['Rtoe', 'Right foot: tip of the second toe'], ['Lankle', 'Left leg (right of the picture): middle of the ankle, at the cuff'], ['Ltoe', 'Left foot: tip of the second toe']];
 function phSteps() { return PH.kind === 'back' ? PH_BACK : PH.kind === 'front' ? PH_FRONT : $('#phRef').value ? PH_STEPS : PH_STEPS.slice(2); }
 function phKindUi() { const k = $('#phKind').value; PH.kind = k; $('#phSideL').hidden = $('#phRefL').hidden = k !== 'arch'; $('#phAuto').title = k === 'arch' ? 'Needs the heel and toe tip tapped first' : 'Finds the feet and legs in the picture'; }
-function openPhoto(kind, side) {
+function openPhoto(kind, side, file) {
   $('#phKind').value = kind || 'arch'; phKindUi(); const last = St.photos.filter(p => (p.kind || 'arch') === 'arch').pop();
   PH.side = side || ({ L: 'R', R: 'L' }[(last || {}).side] || 'L'); $('#phSide').value = PH.side;
-  $('#phWork').hidden = true; phMsg(''); $('#ph').showModal(); $('#phFile').click();
+  $('#phWork').hidden = true; phMsg(''); $('#ph').showModal(); if (file) phLoad(file); else $('#phFile').click();
 }
 $('#phKind').onchange = () => { phKindUi(); PH.pts = []; PH.guess = new Set(); PH.auto = false; phMsg(''); if (PH.img) phDraw(); };
 function phLoad(f) {
@@ -1034,10 +1095,10 @@ const RSAY = { ok: 'Inside the typical range', watch: 'Worth a look', flag: 'Nee
 const repVids = {};
 function repVideo(ci) {
   const c = St.clips[ci]; if (repVids[c.url]) return repVids[c.url];
-  const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = c.url;
+  const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = c.url; fixDur(v);
   v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none'; document.body.appendChild(v); return repVids[c.url] = v;
 }
-async function repReady(v) { for (let i = 0; i < 80 && !(v.readyState >= 2 && v.videoWidth); i++) await new Promise(r => setTimeout(r, 100)); return v.readyState >= 2; }
+async function repReady(v) { for (let i = 0; i < 100 && !(v.readyState >= 2 && v.videoWidth && isFinite(v.duration)); i++) await new Promise(r => setTimeout(r, 100)); return v.readyState >= 2; }
 
 /* a picture of one moment: the person cropped out of the frame, with the skeleton and angle labels for the region */
 async function frameShot(ci, view, f, region, side) {
@@ -1053,7 +1114,7 @@ async function frameShot(ci, view, f, region, side) {
   let sx = (x0 + x1) / 2 - bw / 2, sy = (y0 + y1) / 2 - bh / 2; sx = Math.max(ox, Math.min(ox + w - bw, sx)); sy = Math.max(0, Math.min(h - bh, sy));
   const OW = 420, OH = 560, k0 = OW / bw, cv = document.createElement('canvas'); cv.width = OW; cv.height = OH; const g = cv.getContext('2d');
   g.drawImage(v, sx, sy, bw, bh, 0, 0, OW, OH);
-  const tx = k => (X(k) - sx) * k0, ty = k => (Y(k) - sy) * k0, hot = new Set(REG[region].joints), col = k => k % 2 ? '#e8590c' : '#00a884';
+  const tx = k => (X(k) - sx) * k0, ty = k => (Y(k) - sy) * k0, hot = new Set(REG[region].joints), col = k => k % 2 ? '#00a884' : '#e8590c';
   g.fillStyle = 'rgba(8,16,15,.22)'; g.fillRect(0, 0, OW, OH); g.lineCap = 'round';
   for (const [a, b] of EDG) { const on = hot.has(a) || hot.has(b); g.strokeStyle = on ? (col(a) === col(b) ? col(a) : '#ddd') : 'rgba(255,255,255,.55)'; g.lineWidth = on ? 5 : 2.5; g.beginPath(); g.moveTo(tx(a), ty(a)); g.lineTo(tx(b), ty(b)); g.stroke(); }
   for (let k = 23; k <= 32; k++) { const on = hot.has(k); g.fillStyle = on ? col(k) : 'rgba(255,255,255,.8)'; g.beginPath(); g.arc(tx(k), ty(k), on ? 8 : 4.5, 0, 7); g.fill(); if (on) { g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke(); } }
@@ -1120,6 +1181,30 @@ function rMap(statusOf2) {
   <path d="M176 470C180 495 188 515 196 522C230 528 262 536 270 548C274 560 262 566 240 566H132C116 566 112 548 120 528C124 510 126 490 128 470"/></g><path d="M60 566H300" stroke="#9bb" stroke-dasharray="4 6"/>${dots}</svg>`;
 }
 
+
+/* the live session: timeline of readings and the moments captured on screen */
+function liveSvg(title, series, unit) {
+  const L = St.live.log, W = 800, H = 170, pl = 40, pr = 10, pt = 10, pb = 22, T = Math.max(1, L[L.length - 1].t), vals = series.flatMap(s => s.v.filter(x => x != null && isFinite(x)));
+  if (!vals.length) return ''; let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * .1 || 1; lo -= pad; hi += pad;
+  const X = t => pl + t / T * (W - pl - pr), Y = v => pt + (1 - (v - lo) / (hi - lo)) * (H - pt - pb); let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${rEsc(title)}">`;
+  for (let i = 0; i <= 4; i++) { const v = lo + (hi - lo) * i / 4, y = Y(v); s += `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="#ddd"/><text x="${pl - 5}" y="${y + 4}" text-anchor="end" font-size="11" fill="#555" font-family="JetBrains Mono,monospace">${v.toFixed(Math.abs(hi - lo) < 4 ? 1 : 0)}</text>`; }
+  const step = T > 240 ? 60 : T > 90 ? 30 : T > 40 ? 10 : 5; for (let t = 0; t <= T; t += step) s += `<text x="${X(t)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="#555" font-family="JetBrains Mono,monospace">${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}</text>`;
+  St.live.log.forEach((p, i) => { if (i && p.view !== St.live.log[i - 1].view) s += `<line x1="${X(p.t)}" x2="${X(p.t)}" y1="${pt}" y2="${H - pb}" stroke="#999" stroke-dasharray="4 4"/><text x="${X(p.t) + 4}" y="${pt + 10}" font-size="10" fill="#777">${p.view}</text>`; });
+  series.forEach(se => { let d = ''; se.v.forEach((v, i) => { if (v == null || !isFinite(v)) return; d += (d && se.v[i - 1] != null ? 'L' : 'M') + X(L[i].t).toFixed(1) + ',' + Y(v).toFixed(1); }); s += `<path d="${d}" fill="none" stroke="${se.c}" stroke-width="2"/>`; });
+  return s + `</svg>`;
+}
+function liveSection() {
+  const S = St.live; if (!S || !S.log) return ''; const dur = S.duration, mm = Math.floor(dur / 60), ss = Math.floor(dur % 60), L = S.log, views = [...new Set(S.passes.map(p => p.view))];
+  const ch = [];
+  if (L.length > 2) { ch.push(['Cadence, steps a minute', [{ v: L.map(p => p.cad), c: '#444' }]]);
+    ch.push(['Knee bend now, degrees (left and right)', [{ v: L.map(p => p.knee[0]), c: '#0a8f72' }, { v: L.map(p => p.knee[1]), c: '#d9560f' }]]);
+    ch.push(['Knee swing peak, degrees (left and right)', [{ v: L.map(p => p.kfs[0]), c: '#0a8f72' }, { v: L.map(p => p.kfs[1]), c: '#d9560f' }]]); }
+  const charts = ch.map(([t, se]) => { const g = liveSvg(t, se); return g ? `<div class="r-chart"><div>${rEsc(t)}</div>${g}</div>` : ''; }).join('');
+  return `<section class="r-live"><div class="r-rh" style="--c:#0a8f72"><div><h2>Live session</h2><p>Everything read and captured while the camera was running</p></div><span style="color:#0a8f72">${mm}:${String(ss).padStart(2, '0')} recorded</span></div>
+    <div class="r-big" style="margin-bottom:12px"><div style="--c:#0a8f72"><b>${S.steps.L + S.steps.R}</b>steps counted</div><div style="--c:#0a8f72"><b>${S.passes.length}</b>recording${S.passes.length > 1 ? 's' : ''} (${views.join(', ')})</div><div style="--c:#0a8f72"><b>${S.shots.length}</b>moments captured</div></div>
+    ${charts}<h3 class="r-h3">Moments captured</h3><div class="r-gal">${S.shots.map(s => `<figure><img src="${s.src}" alt=""><figcaption><b>${rEsc(s.label)}</b> at ${Math.floor(s.t / 60)}:${String(Math.floor(s.t % 60)).padStart(2, '0')}${s.read ? '<br>' + rEsc(s.read) : ''}</figcaption></figure>`).join('')}</div></section>`;
+}
+
 async function renderReport() {
   const el = $('#report'), token = renderReport.tok = (renderReport.tok || 0) + 1, say = t => { if (renderReport.tok === token) el.innerHTML = `<div class="r-wait">${t}</div>`; };
   say('Preparing your report…');
@@ -1163,6 +1248,7 @@ async function renderReport() {
       <div class="r-right">${shots[r].length ? `<div class="r-shots${shots[r].length === 1 ? ' one' : ''}">${shots[r].map(s => `<figure><img src="${s.src}" alt=""><figcaption>${rEsc(s.cap)}</figcaption></figure>`).join('')}</div>` : ''}
       ${defs.map(d => `<div class="r-chart"><div>${rEsc(d.t)}</div>${chartSvg(d, { print: true }).svg}</div>`).join('')}</div></div></section>`;
   }
+  h += liveSection();
   const miss = []; if (St.clipOf.back == null && !St.photos.some(p => p.res && p.kind === 'back')) miss.push('rearfoot alignment (needs a view or photo from behind)'); if (!St.photos.some(p => p.res && (p.kind || 'arch') === 'arch')) miss.push('arch and foot posture (needs a side photo of each foot)');
   h += `<section class="r-pat"><h2>Walking patterns checked</h2><table><tr><th>Pattern</th><th>Result</th><th>Signs found</th></tr>` + pats.map(p => `<tr><td>${p.name}</td><td class="r-pv" style="--c:${p.verdict === 'consistent' ? RCOL.flag : p.verdict === 'some' ? RCOL.watch : '#667'}">${PV[p.verdict][0]}</td><td>${p.signs.filter(s => s.state).map(s => rEsc(s.label.toLowerCase()) + ' (' + rEsc(s.value) + ')').join('; ') || '-'}</td></tr>`).join('') +
     `</table><div class="fine">Pattern hints are screening rules of thumb, not validated cut-offs and not a diagnosis.</div></section>`;
@@ -1171,5 +1257,215 @@ async function renderReport() {
     <div class="fine">Typical ranges are standard adult walking values from gait textbooks (for example Perry and Burnfield, Gait Analysis: Normal and Pathological Function). Values come from a single 2-D camera with automatic landmark detection and can differ from a laboratory measurement by several degrees; ankle and foot figures are the roughest, and photo measures are estimates. This screening report is not a diagnosis.</div></section>`;
   el.innerHTML = h;
 }
+/* ---------- runtime analysis: live camera, skeleton and readings on screen, recorded into the report ---------- */
+const RT = { on: false, stream: null, pose: null, view: 'side', rec: false, busy: false, slot0: 0, slot: -1, lmAt: [], lm: null, ring: new Map(), an: null, M: [], hs: { L: [], R: [] }, steps: { L: 0, R: 0 },
+  passes: [], pass: null, log: [], shots: [], trail: { L: [], R: [] }, pulse: null, lastAn: 0, lastLog: 0, lastShot: 0, sess0: 0, vw: 1280, vh: 720, raf: 0 };
+const RTV = () => $('#rtv'), SL = 40;   // one slot = 40 ms = 25 frames a second, the rate every analysis expects
+
+async function getPoseVideo() {
+  if (window.__fakeVideoPose) return window.__fakeVideoPose;
+  if (RT.pose) return RT.pose;
+  try {
+    const mod = await import(`${MP_URL}/vision_bundle.mjs`), fs = await mod.FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
+    const mk = d => mod.PoseLandmarker.createFromOptions(fs, { baseOptions: { modelAssetPath: MODEL_URL, delegate: d }, runningMode: 'VIDEO', numPoses: 1, minPoseDetectionConfidence: .4, minPosePresenceConfidence: .4, minTrackingConfidence: .4 });
+    try { RT.pose = await mk('GPU'); } catch (e) { console.warn('GPU delegate failed, using CPU', e); RT.pose = await mk('CPU'); }
+  } catch (e) { console.error(e); throw new Error('The pose model could not be downloaded. It needs an internet connection the first time. Open studio.html in a normal browser tab.'); }
+  return RT.pose;
+}
+
+/* ----- open and close ----- */
+async function rtOpen() {
+  if (RT.on) return; RT.on = true; $('#rt').hidden = false; document.body.style.overflow = 'hidden';
+  Object.assign(RT, { passes: [], pass: null, log: [], shots: [], hs: { L: [], R: [] }, steps: { L: 0, R: 0 }, lmAt: [], slot: -1, ring: new Map(), an: null, M: [], trail: { L: [], R: [] }, rec: false, sess0: 0 });
+  rtUi(); rtMsg('Starting the camera…');
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('This page cannot use the camera. Open it from the https link in a normal browser tab.');
+    RT.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false });
+    const v = RTV(); v.srcObject = RT.stream; await v.play(); RT.vw = v.videoWidth || 1280; RT.vh = v.videoHeight || 720; rtFit();
+    rtMsg('Loading the pose model. The first time takes a few seconds…'); const pose = await getPoseVideo(); RT.poseObj = pose;
+    if (!RT.on) return; rtMsg(''); RT.slot0 = performance.now(); RT.sess0 = RT.slot0; $('#rtTrack').textContent = 'Looking for a person'; rtLoop();
+  } catch (e) { console.error(e); rtMsg((e.name === 'NotAllowedError' ? 'Camera permission was refused. Allow the camera for this page and open Runtime analysis again.' : e.name === 'NotFoundError' ? 'No camera was found on this device.' : e.message || String(e))); }
+}
+function rtStopCamera() { cancelAnimationFrame(RT.raf); if (RT.stream) RT.stream.getTracks().forEach(t => t.stop()); RT.stream = null; RT.ring.forEach(b => { try { b.close(); } catch (e) {} }); RT.ring.clear(); }
+async function rtClose() {
+  if (!RT.on) return; if (RT.rec) await rtStop(); RT.on = false; rtStopCamera(); $('#rt').hidden = true; document.body.style.overflow = '';
+}
+function rtMsg(t) { const m = $('#rtMsg'); m.textContent = t || ''; m.hidden = !t; }
+function rtFit() {
+  const m = $('#rtMain'), w = m.clientWidth, h = m.clientHeight, ar = RT.vw / RT.vh, ww = Math.min(w, h * ar), wh = ww / ar, vw = $('#rtVw');
+  vw.style.width = ww + 'px'; vw.style.height = wh + 'px'; const c = $('#rtc'); if (c.width !== RT.vw) { c.width = RT.vw; c.height = RT.vh; }
+}
+addEventListener('resize', () => { if (RT.on) rtFit(); });
+
+/* ----- the loop: read a frame, find the body, draw, measure, record ----- */
+function rtLoop() {
+  RT.raf = requestAnimationFrame(rtLoop); const v = RTV(); if (!RT.on || v.readyState < 2) return; const now = performance.now(), slot = Math.floor((now - RT.slot0) / SL);
+  if (RT.busy) return; RT.busy = true;
+  try {
+    let lm = null; const r = RT.poseObj.detectForVideo(v, now), l = r && r.landmarks && r.landmarks[0]; if (l) lm = l.map(p => [p.x, p.y, p.visibility == null ? 1 : p.visibility]);
+    RT.lm = lm; for (let s = RT.slot + 1; s <= slot; s++) RT.lmAt[s] = lm;   // hold the last reading across any slot that was skipped
+    if (slot > RT.slot) { RT.slot = slot; rtRingAdd(slot); if (RT.rec) rtRecDraw(); }
+    rtTrail(lm); rtDraw(); rtTick(now);
+  } catch (e) { console.warn(e); } finally { RT.busy = false; }
+}
+function rtRingAdd(slot) {
+  const v = RTV(); createImageBitmap(v, { resizeWidth: 640 }).then(b => { RT.ring.set(slot, b); const old = RT.ring.get(slot - 60); if (old) { old.close(); RT.ring.delete(slot - 60); } }).catch(() => {});
+}
+function rtTrail(lm) {
+  for (const n of 'LR') { const k = J[n].ank, t = RT.trail[n]; if (lm && lm[k][2] > .4) t.push([lm[k][0], lm[k][1]]); else if (t.length) t.shift(); if (t.length > 26) t.shift(); }
+}
+
+/* ----- drawing: the skeleton, angle tags and heel-strike rings, used on screen and in captured pictures ----- */
+const RC = { L: '#7fe3c4', R: '#ff9d6e' };
+function rtSkeleton(g, lm, W, H, o = {}) {
+  if (!lm) return; const sc = W / 1280, X = k => lm[k][0] * W, Y = k => lm[k][1] * H, ok = k => lm[k][2] > .35, col = k => k % 2 ? RC.L : RC.R;
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  if (o.trail) for (const n of 'LR') { const t = o.trail[n]; for (let i = 1; i < t.length; i++) { g.strokeStyle = RC[n]; g.globalAlpha = i / t.length * .55; g.lineWidth = 3 * sc * (i / t.length + .4); g.beginPath(); g.moveTo(t[i - 1][0] * W, t[i - 1][1] * H); g.lineTo(t[i][0] * W, t[i][1] * H); g.stroke(); } g.globalAlpha = 1; }
+  const gy = Math.max(Y(31), Y(32), Y(29), Y(30)); g.strokeStyle = 'rgba(127,227,196,.28)'; g.lineWidth = 1.5 * sc; g.setLineDash([10 * sc, 8 * sc]); g.beginPath(); g.moveTo(0, gy); g.lineTo(W, gy); g.stroke();   // floor line
+  const px = (X(23) + X(24)) / 2; g.beginPath(); g.moveTo(px, Y(11)); g.lineTo(px, gy); g.stroke(); g.setLineDash([]);                                                                            // plumb line
+  for (const [a, b] of EDG) { if (!ok(a) || !ok(b)) continue; const leg = a >= 23 && b >= 23, same = col(a) === col(b); g.strokeStyle = leg ? (same ? col(a) : 'rgba(255,255,255,.55)') : 'rgba(210,235,228,.5)'; g.lineWidth = (leg ? 6 : 3) * sc; g.beginPath(); g.moveTo(X(a), Y(a)); g.lineTo(X(b), Y(b)); g.stroke(); }
+  for (let k = 23; k <= 32; k++) { if (!ok(k)) continue; const big = [25, 26, 27, 28].includes(k); g.fillStyle = col(k); g.globalAlpha = .22; g.beginPath(); g.arc(X(k), Y(k), (big ? 20 : 13) * sc, 0, 7); g.fill(); g.globalAlpha = 1;
+    g.beginPath(); g.arc(X(k), Y(k), (big ? 8 : 5.5) * sc, 0, 7); g.fillStyle = col(k); g.fill(); g.lineWidth = 2 * sc; g.strokeStyle = '#05090a'; g.stroke(); }
+  if (o.view === 'side' && o.labels !== false) {   // live angles on the joints
+    g.font = `700 ${19 * sc}px "JetBrains Mono", monospace`; g.textBaseline = 'middle';
+    const tag = (k, txt, n) => { const right = n === 'R', x = X(k) + (right ? 24 : -24) * sc, y = Y(k), w = g.measureText(txt).width + 14 * sc; g.fillStyle = 'rgba(5,9,10,.72)'; const x0 = right ? x - 4 * sc : x - w + 4 * sc; g.fillRect(x0, y - 15 * sc, w, 30 * sc);
+      g.fillStyle = RC[n]; g.fillRect(right ? x0 : x0 + w - 3 * sc, y - 15 * sc, 3 * sc, 30 * sc); g.textAlign = right ? 'left' : 'right'; g.fillText(txt, right ? x + 6 * sc : x - 6 * sc, y); };
+    const P = k => [lm[k][0] * W, lm[k][1] * H];
+    for (const n of 'LR') { const j = J[n]; if (!ok(j.hip) || !ok(j.knee) || !ok(j.ank)) continue;
+      tag(j.knee, f1(180 - angAt(P(j.hip), P(j.knee), P(j.ank)), 0) + '°', n);
+      const th = Math.atan2(Math.abs(X(j.knee) - X(j.hip)), Y(j.knee) - Y(j.hip)) * 180 / Math.PI; tag(j.hip, f1(th, 0) + '°', n);
+      if (ok(j.toe)) tag(j.ank, f1(90 - angAt(P(j.knee), P(j.ank), P(j.toe)), 0) + '°', n); }
+  } else if (o.view && o.view !== 'side' && ok(23) && ok(24)) {   // from front or back: pelvis line and its tilt
+    const tilt = Math.atan2(Y(24) - Y(23), Math.abs(X(24) - X(23))) * 180 / Math.PI; g.strokeStyle = '#f0c05a'; g.lineWidth = 3 * sc; g.setLineDash([8 * sc, 6 * sc]); g.beginPath(); g.moveTo(X(23), Y(23)); g.lineTo(X(24), Y(24)); g.stroke(); g.setLineDash([]);
+    g.font = `700 ${19 * sc}px "JetBrains Mono", monospace`; g.fillStyle = '#f0c05a'; g.textAlign = 'center'; g.fillText('pelvis ' + f1(Math.abs(tilt), 1) + '°', px, Math.min(Y(23), Y(24)) - 18 * sc);
+  }
+  if (o.pulse) { const age = (performance.now() - o.pulse.t) / 450; if (age < 1) { g.strokeStyle = RC[o.pulse.n]; g.lineWidth = 4 * sc * (1 - age); g.beginPath(); g.arc(X(o.pulse.k), Y(o.pulse.k), (14 + age * 70) * sc, 0, 7); g.stroke(); } }
+}
+function rtDraw() {
+  const c = $('#rtc'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+  if ($('#rtSk').checked && RT.lm) rtSkeleton(g, RT.lm, c.width, c.height, { view: RT.view, trail: RT.trail, pulse: RT.pulse });
+  const vis = RT.lm ? (() => { let s = 0; for (let k = 23; k <= 32; k++) s += RT.lm[k][2]; return s / 10; })() : 0, t = $('#rtTrack');
+  const txt = !RT.lm ? 'No person in view' : vis < .5 ? 'Show the whole body' : 'Tracking'; if (t.textContent !== txt) { t.textContent = txt; t.classList.toggle('ok', txt === 'Tracking'); }
+}
+
+/* ----- readings: every half second, measure the last seven seconds ----- */
+const RT_TILES = {
+  side: [['cad', 'Cadence'], ['stance', 'Stance'], ['stepl', 'Step length'], ['kfs', 'Knee, swing peak'], ['hipx', 'Hip extension'], ['df', 'Ankle dorsiflexion'], ['trunk', 'Trunk lean'], ['clr', 'Toe clearance'], ['cvT', 'Step-time variation']],
+  front: [['pdl', 'Pelvic drop'], ['pelv', 'Pelvis tilt'], ['sway', 'Trunk sway'], ['stepw', 'Step width'], ['kfr', 'Knee alignment'], ['lat', 'Foot swing out'], ['gapmin', 'Narrowest gap'], ['cvW', 'Step-width variation']],
+  back: [['rear', 'Rearfoot, standing'], ['rearm', 'Rearfoot, mid-stance'], ['pdl', 'Pelvic drop'], ['pelv', 'Pelvis tilt'], ['sway', 'Trunk sway'], ['stepw', 'Step width'], ['kfr', 'Knee alignment'], ['gapmin', 'Narrowest gap']]
+};
+function rtTick(now) {
+  if (now - RT.lastAn < 500 || RT.slot < 75) return; RT.lastAn = now;
+  const end = RT.slot, start = Math.max(RT.passStart || 0, end - 175), lm = []; for (let s = start; s <= end; s++) lm.push(RT.lmAt[s] || null);
+  if (lm.filter(Boolean).length < 60) { RT.an = null; RT.M = []; rtHud(); return; }
+  try {
+    const view = { w: RT.vw, h: RT.vh, lm }; let M, res;
+    if (RT.view === 'side') { res = analyzeSide(view, FPS); M = buildMetrics({ sides: [{ res, clip: 0 }], fronts: [], backs: [] }); }
+    else { const back = RT.view === 'back'; res = analyzeFront(view, FPS, null, back); M = buildMetrics({ sides: [], fronts: back ? [] : [{ res, clip: 0 }], backs: back ? [{ res, clip: 0 }] : [] }); }
+    RT.an = res; RT.M = M; RT.off = start; rtSteps(res);
+  } catch (e) { RT.an = null; RT.M = []; }
+  rtHud(); if (RT.rec && now - RT.lastLog >= 1000) { RT.lastLog = now; rtLog(); }
+}
+function rtSteps(res) {
+  const hs = RT.view === 'side' ? { L: res.leg.L.hs, R: res.leg.R.hs } : res.hs; if (!hs) return;
+  for (const n of 'LR') for (const f of (hs[n] || [])) { const a = RT.off + f; if (RT.hs[n].some(x => Math.abs(x - a) < 9)) continue; RT.hs[n].push(a); RT.steps[n]++;
+    RT.pulse = { n, k: J[n].ank, t: performance.now() }; if (RT.rec && performance.now() - RT.lastShot > 700) { RT.lastShot = performance.now(); rtShot(`Heel strike, ${n === 'L' ? 'left' : 'right'}`, a); } }
+}
+function rtVal(m) { if (!m) return null; const d = ['×', 's'].includes(m.unit) ? 2 : 1, u = m.unit.startsWith('°') ? '°' : m.unit.startsWith('%') ? '%' : m.unit.split(' ')[0];
+  return m.pair ? `<span class="l">${f1(m.L.v, d)}</span><span class="r">${f1(m.R.v, d)}</span><small>${u}</small>` : `<span>${f1(m.S.v, d)}</span><small>${u}</small>`; }
+function rtHud() {
+  const M = RT.M, by = id => M.find(m => m.id === id), tiles = RT_TILES[RT.view] || [], el = $('#rtL'), n = RT.steps.L + RT.steps.R;
+  let h = `<div class="rt-tile"><div class="k">Steps counted</div><div class="v"><span>${n}</span><small>L ${RT.steps.L} · R ${RT.steps.R}</small></div></div>`;
+  for (const [id, label] of tiles) { const m = by(id); h += `<div class="rt-tile ${m ? m.status : 'na'}"><div class="k">${label}</div><div class="v">${m ? rtVal(m) : '<span class="na">…</span>'}</div></div>`; }
+  if (!M.length) h += `<div class="rt-hint">Walk across the view for a few steps. Readings appear after about three seconds.</div>`;
+  el.innerHTML = h; rtTraces(); rtArch();
+}
+function rtTraces() {
+  const A = RT.an, set = [['#rtT1', RT.view === 'side' && A ? [A.leg.L.kf, A.leg.R.kf] : null], ['#rtT2', RT.view === 'side' && A ? [A.leg.L.thigh, A.leg.R.thigh] : A && A.pel ? [A.pel] : null], ['#rtT3', RT.view === 'side' && A ? [A.leg.L.af, A.leg.R.af] : null]];
+  for (const [id, ser] of set) { const c = $(id), g = c.getContext('2d'), W = c.width, H = c.height; g.clearRect(0, 0, W, H); g.strokeStyle = 'rgba(127,227,196,.12)'; g.lineWidth = 1; for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(0, H * i / 4); g.lineTo(W, H * i / 4); g.stroke(); }
+    if (!ser) { g.fillStyle = 'rgba(223,238,233,.4)'; g.font = '13px Space Grotesk, sans-serif'; g.fillText(RT.view === 'side' ? 'Waiting for steps' : id === '#rtT2' ? 'Waiting for steps' : 'Side view only', 10, H / 2); continue; }
+    const all = ser.flatMap(a => a.slice(-150)), lo = Math.min(...all), hi = Math.max(...all), pad = (hi - lo) * .1 || 1;
+    ser.forEach((a, i) => { const d = a.slice(-150); g.strokeStyle = ser.length === 1 ? '#f0c05a' : i ? RC.R : RC.L; g.lineWidth = 2; g.beginPath(); d.forEach((v, k) => { const x = k / 149 * W, y = H - 6 - (v - lo + pad) / (hi - lo + 2 * pad) * (H - 12); k ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); }); }
+}
+function rtArch() {
+  const el = $('#rtArch'), ms = St.metrics.filter(m => m.region === 'arch' && ['ahi', 'archclr'].includes(m.id)), tx = m => m.pair ? `L ${f1(m.L.v, rDecArch(m))} · R ${f1(m.R.v, rDecArch(m))}` : f1(m.S.v, rDecArch(m));
+  const h = `<div class="rt-h">Arch</div>` + (ms.length ? ms.map(m => `<div class="rt-arch ${m.status}"><span>${m.id === 'ahi' ? 'Arch height index' : 'Space under arch, %'}</span><b>${tx(m)}</b></div>`).join('') : `<div class="rt-hint" style="margin:0">No arch photo yet. Use Photo for arch below.</div>`);
+  if (el.dataset.h !== h) { el.dataset.h = h; el.innerHTML = h; }
+}
+const rDecArch = m => m.unit === '×' ? 2 : 1;
+
+/* ----- pictures and the running log ----- */
+function rtCompose(slot) {
+  const bmp = RT.ring.get(slot) || RT.ring.get(RT.slot), W = 960, H = Math.round(W * RT.vh / RT.vw), c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  if (bmp) g.drawImage(bmp, 0, 0, W, H); else g.drawImage(RTV(), 0, 0, W, H); rtSkeleton(g, RT.lmAt[slot] || RT.lm, W, H, { view: RT.view }); return c.toDataURL('image/jpeg', .8);
+}
+function rtShot(label, slot) {
+  slot = slot == null ? RT.slot : slot; const t = (performance.now() - RT.sess0) / 1000, M = RT.M, pick = id => { const m = M.find(x => x.id === id); return m ? (m.pair ? `L ${f1(m.L.v, 0)}° R ${f1(m.R.v, 0)}°` : f1(m.S.v, 1)) : null; };
+  const read = RT.view === 'side' ? [pick('kfs') && 'knee peak ' + pick('kfs'), pick('cad') && 'cadence ' + Math.round(parseFloat(pick('cad'))) + '/min'].filter(Boolean).join(' · ') : '';
+  if (RT.shots.length >= 80) RT.shots.splice(1, 1);
+  const s = { src: rtCompose(slot), label, t, view: RT.view, read }; RT.shots.push(s); rtStrip(); return s;
+}
+function rtStrip() { $('#rtStrip').innerHTML = RT.shots.slice(-12).map(s => `<figure><img src="${s.src}" alt=""><figcaption>${rEsc(s.label)}</figcaption></figure>`).join(''); $('#rtStrip').scrollLeft = 1e6; }
+function rtLog() {
+  const g = id => { const m = RT.M.find(x => x.id === id); return m ? (m.pair ? [m.L.v, m.R.v] : [m.S.v, null]) : [null, null]; }, A = RT.an, last = a => a && a.length ? a[a.length - 1] : null;
+  RT.log.push({ t: (performance.now() - RT.sess0) / 1000, view: RT.view, cad: g('cad')[0], kfs: g('kfs'), stance: g('stance'), stepl: g('stepl'), pdl: g('pdl'), sway: g('sway')[0],
+    knee: RT.view === 'side' && A ? [last(A.leg.L.kf), last(A.leg.R.kf)] : [null, null], steps: RT.steps.L + RT.steps.R });
+}
+
+/* ----- recording: one pass per camera view ----- */
+function rtRecCanvas() { if (!RT.recCv) { RT.recCv = document.createElement('canvas'); } const w = Math.min(RT.vw, 960); RT.recCv.width = w; RT.recCv.height = Math.round(w * RT.vh / RT.vw); return RT.recCv; }
+let rtLastDraw = 0;
+function rtRecDraw() { const now = performance.now(); if (now - rtLastDraw < 36 || !RT.recCv) return; rtLastDraw = now; RT.recCv.getContext('2d').drawImage(RTV(), 0, 0, RT.recCv.width, RT.recCv.height); }
+function rtPassStart(view) {
+  const cv = rtRecCanvas(), stream = cv.captureStream ? cv.captureStream(25) : null, p = { view, startSlot: Math.max(0, RT.slot + 1), vw: cv.width, vh: cv.height, chunks: [], mime: '', rec: null, t0: performance.now() };
+  RT.passStart = p.startSlot; RT.hs = { L: [], R: [] };
+  cv.getContext('2d').drawImage(RTV(), 0, 0, cv.width, cv.height);
+  if (stream && window.MediaRecorder) { const mt = ['video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t)); p.mime = mt || '';
+    try { p.rec = new MediaRecorder(stream, mt ? { mimeType: mt, videoBitsPerSecond: 2500000 } : {}); p.rec.ondataavailable = e => e.data.size && p.chunks.push(e.data); p.rec.start(1000); } catch (e) { console.warn(e); p.rec = null; } }
+  RT.pass = p; RT.passes.push(p);
+}
+function rtPassEnd() {
+  const p = RT.pass; if (!p) return Promise.resolve(); p.endSlot = RT.slot; p.dur = (performance.now() - p.t0) / 1000;
+  p.done = new Promise(res => { if (p.rec && p.rec.state !== 'inactive') { p.rec.onstop = () => res(); p.rec.stop(); } else res(); }); RT.pass = null; return p.done;
+}
+async function rtToggle() {
+  if (!RT.rec) { if (!RT.poseObj || !RT.stream) return; RT.rec = true; RT.log = RT.log.length ? RT.log : []; RT.sess0 = performance.now(); rtPassStart(RT.view); rtUi(); rtShot('Start of recording'); }
+  else await rtStop();
+}
+async function rtSwitchView(v) {
+  if (v === RT.view) return; if (RT.rec) { await rtPassEnd(); RT.view = v; RT.an = null; RT.M = []; RT.trail = { L: [], R: [] }; rtPassStart(v); rtShot('New view: ' + v); } else { RT.view = v; RT.an = null; RT.M = []; RT.hs = { L: [], R: [] }; }
+  rtUi(); rtHud();
+}
+async function rtStop() {
+  if (!RT.rec) return; RT.rec = false; rtMsg('Saving the recording…'); await rtPassEnd(); rtShot('End of recording');
+  const clips = [], usable = RT.passes.filter(p => p.endSlot - p.startSlot >= 50);
+  for (const p of usable) {
+    const lm = RT.lmAt.slice(p.startSlot, p.endSlot + 1).map(x => x || null); let url = null;
+    if (p.chunks.length) url = URL.createObjectURL(new Blob(p.chunks, { type: p.mime || 'video/webm' }));
+    if (!url) { rtMsg('This browser could not record video. Readings and pictures were still captured.'); continue; }
+    clips.push({ name: 'Live pass ' + (clips.length + 1), url, view: p.view, lm, vw: p.vw, vh: p.vh, dur: p.dur });
+  }
+  rtMsg('');
+  if (!clips.length) { toast('The recording was too short. Record at least two seconds.'); rtUi(); return; }
+  if (St.clips.length === 1 && St.clips[0].sample) St.clips = [];
+  for (const c of clips) St.clips.push(makeClip(c.name, c.url, c.view, { [c.view]: { w: c.vw, h: c.vh, lm: c.lm } }, c.vw, c.vh, { live: true }));
+  St.live = { start: new Date(), duration: (performance.now() - RT.sess0) / 1000 + 0, log: RT.log.slice(), shots: RT.shots.slice(), passes: clips.map(c => ({ view: c.view, dur: c.dur })), steps: { ...RT.steps } };
+  St.live.duration = clips.reduce((s, c) => s + c.dur, 0);
+  compute(); loadClip(St.clips.length - 1); renderHeader(); renderModel(); renderPanel(); renderCharts(); rtUi();
+  toast(`Saved ${clips.length} recording${clips.length > 1 ? 's' : ''} with ${RT.shots.length} captured moments. Press Report for everything.`, 6000);
+  await rtClose();
+}
+function rtUi() {
+  const go = $('#rtGo'); go.classList.toggle('on', RT.rec); go.querySelector('span').textContent = RT.rec ? 'Stop and save' : 'Record'; $('#rtState').textContent = RT.rec ? 'Recording' : 'Live'; $('#rtState').classList.toggle('rec', RT.rec);
+  $$('#rt .rt-seg button').forEach(b => b.classList.toggle('on', b.dataset.v === RT.view));
+}
+setInterval(() => { if (!RT.on) return; const t = RT.rec && RT.pass ? (performance.now() - RT.sess0) / 1000 : 0, m = Math.floor(t / 60), s = Math.floor(t % 60); $('#rtClock').textContent = `${m}:${String(s).padStart(2, '0')}`; }, 250);
+
+$('#b-rt').onclick = rtOpen; $('#rtX').onclick = rtClose; $('#rtGo').onclick = rtToggle; $('#rtSnap').onclick = () => { if (RT.lm) { rtShot('Captured by hand'); toast('Moment captured'); } };
+$$('#rt .rt-seg button').forEach(b => b.onclick = () => rtSwitchView(b.dataset.v));
+$('#rtPhoto').onclick = () => {
+  const v = RTV(), c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0);
+  c.toBlob(b => { if (b) openPhoto('arch', null, b); }, 'image/jpeg', .92);
+};
 
 </script></body></html>

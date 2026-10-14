@@ -788,10 +788,17 @@ function seekTo(v, t) {
 }
 async function analyzeFile(file, layout, name) {
   capMsg('Reading the video…', 0.02);
-  const url = URL.createObjectURL(file), v = document.createElement('video'); v.muted = true; v.setAttribute('playsinline', ''); v.preload = 'auto'; v.src = url;
-  await waitFor(v, 'loadedmetadata', 20000, 'The video did not open. Check the file is a video and try again.');
+  const url = URL.createObjectURL(file), v = document.createElement('video'); v.muted = true; v.defaultMuted = true; v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.preload = 'auto';
+  v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none'; document.body.appendChild(v);   // phones only load a video that is in the page
+  v.src = url; v.load();
+  await new Promise((res, rej) => { const t0 = Date.now(); const iv = setInterval(() => {
+      const s = Math.round((Date.now() - t0) / 1000);
+      if (v.error) { clearInterval(iv); rej(new Error(`This browser cannot decode that video (${file.type || 'unknown type'}, error ${v.error.code}). Try Chrome, or an MP4 (H.264) file; iPhone HEVC files do not open in some browsers.`)); }
+      else if (v.readyState >= 2 && v.videoWidth) { clearInterval(iv); res(); }
+      else if (s >= 2 && s % 3 === 2) { const p = v.play(); if (p && p.then) p.then(() => v.pause(), () => {}); }   // nudges stubborn mobile browsers to fetch the first frame
+      if (s >= 45) { clearInterval(iv); rej(new Error(`The video did not open after ${s} seconds (${file.type || 'no type'}, ${(file.size / 1048576).toFixed(1)} MB, ready ${v.readyState}, network ${v.networkState}). The browser may not support this format; try Chrome on a computer.`)); }
+      else capMsg(`Reading the video… ${s}s`, 0.02); }, 250); });
   if (!isFinite(v.duration)) { v.currentTime = 1e101; await waitFor(v, 'timeupdate', 8000, 'Could not read the length of that recording.'); v.currentTime = 0; }
-  if (v.readyState < 2) await waitFor(v, 'loadeddata', 20000, 'The video did not load its first frame.');
   const dur = v.duration, vw = v.videoWidth, vh = v.videoHeight, N = Math.min(Math.floor(dur * FPS), 1500);
   if (!vw || !vh) throw new Error('That file has no picture to analyse.');
   if (N < 20) throw new Error('That clip is too short to analyse. It needs at least a second.');
@@ -808,7 +815,7 @@ async function analyzeFile(file, layout, name) {
   }
   const ok = Object.values(views).every(v => v.lm.filter(Boolean).length > N * .5);
   if (!ok) throw new Error('The body was not found in most frames. Check the whole body is in view, the light is even, and the camera was held still.');
-  return makeClip(name, url, layout, views, vw, vh);
+  v.remove(); return makeClip(name, url, layout, views, vw, vh);
 }
 function openCap(mode) {
   const r = St.region, rec = RECOMMEND[r]; $('#capT').textContent = `Add a video${REG[r] ? ' for ' + REG[r].name.toLowerCase() : ''}`;

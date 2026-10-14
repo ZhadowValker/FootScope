@@ -219,9 +219,10 @@ dialog{max-height:94vh;overflow:auto}
 </div></dialog>
 <dialog id="ph"><div class="dlg">
   <h3>Foot photo: arch</h3>
-  <p class="dim" id="phHelp" style="margin:0 0 8px">Take or pick a side photo of the inner edge of a standing foot, with the foot on an A4 sheet. Tap the points as asked. The photo stays on this device.</p>
-  <div class="row"><label class="dim">Foot <select id="phSide"><option value="L">Left</option><option value="R">Right</option></select></label>
-  <label class="dim">Scale <select id="phRef"><option value="297">A4 long edge (297 mm)</option><option value="210">A4 short edge (210 mm)</option><option value="">No scale</option></select></label></div>
+  <p class="dim" id="phHelp" style="margin:0 0 8px">Take or pick a photo of a standing person. For the arch, photograph the inner edge of one foot on an A4 sheet. Tap the points as asked, or press Auto-place. The photo stays on this device.</p>
+  <div class="row"><label class="dim">Photo of <select id="phKind"><option value="arch">Inner side of one foot (arch)</option><option value="back">Back of the legs and heels</option><option value="front">Front of the legs and feet</option></select></label>
+  <label class="dim" id="phSideL">Foot <select id="phSide"><option value="L">Left</option><option value="R">Right</option></select></label>
+  <label class="dim" id="phRefL">Scale <select id="phRef"><option value="297">A4 long edge (297 mm)</option><option value="210">A4 short edge (210 mm)</option><option value="">No scale</option></select></label></div>
   <div class="row"><button class="btn p" id="phGal">Choose photo</button><button class="btn" id="phCamB">Take photo</button><button class="btn" id="phX">Close</button></div>
   <input type="file" id="phFile" accept="image/*" hidden><input type="file" id="phCam" accept="image/*" capture="environment" hidden>
   <div id="phWork" hidden>
@@ -550,8 +551,15 @@ function archFromPhoto(P, refPx, refMm) {
   return { footPx: L, mmPerPx: mm, footMm: mm ? L * mm : null, truncPx: trunc, dorsH: h(P.dors), navH: h(P.nav), soleH: h(P.sole),
     ahi: h(P.dors) / trunc, navPct: h(P.nav) / L * 100, clrPct: h(P.sole) / L * 100, dorsAt: along(P.dors), navAt: along(P.nav), ballAt: along(P.ball) };
 }
+/* standing photos of the legs from behind or in front. P has, per leg n (L or R): back: Ncalf, Nankle, Nheel; front: Nankle, Ntoe. Picture-left is the person's right from the front and the person's left from behind. */
+function legsFromPhoto(kind, P) {
+  const lat = kind === 'back' ? { L: -1, R: 1 } : { L: 1, R: -1 }, tilt = (a, b, l) => Math.atan2((b[0] - a[0]) * l, b[1] - a[1]) * 180 / Math.PI, out = {};
+  for (const n of 'LR') out[n] = kind === 'back' ? tilt(P[n + 'ankle'], P[n + 'heel'], lat[n]) - tilt(P[n + 'calf'], P[n + 'ankle'], lat[n]) : tilt(P[n + 'ankle'], P[n + 'toe'], lat[n]);
+  return out;
+}
 function photoMetrics(photos) {
-  const out = [], by = { L: null, R: null }; photos.forEach(p => { if (p.res) by[p.side] = p; });
+  const out = [], by = { L: null, R: null }; photos.forEach(p => { if ((p.kind || 'arch') === 'arch' && p.res) by[p.side] = p; });
+  const auto = photos.some(p => p.res && p.res.auto), tail = auto ? '. Some points were placed automatically' : '';
   const defs = [
     ['ahi', 'Arch height index', '×', [.30, .38], 'Height of the top of the foot at half its length, divided by heel-to-ball length', r => r.ahi, 'ahi'],
     ['navp', 'Navicular height, % of foot length', '%', null, 'Height of the inner mid-foot bump above the floor', r => r.navPct],
@@ -560,14 +568,19 @@ function photoMetrics(photos) {
   for (const [id, label, unit, ref, note, f] of defs) {
     const g = n => { const p = by[n]; if (!p) return null; const v = f(p.res); return v == null || !isFinite(v) ? null : { v, photo: n }; };
     const L = g('L'), R = g('R'); if (!L && !R) continue;
-    const m = { region: 'arch', id, label, unit, ref, conf: 'low', note: note + ((by.L && by.L.res.auto) || (by.R && by.R.res.auto) ? '. Some points were placed automatically' : ''), view: 'photo', photo: true };
+    const m = { region: 'arch', id, label, unit, ref, conf: 'low', note: note + tail, view: 'photo', photo: true };
     if (L && R) { m.pair = true; m.L = L; m.R = R; } else { m.pair = false; m.S = L || R; m.label += L ? ' (left foot)' : ' (right foot)'; }
     m.status = statusOf(m); out.push(m);
+  }
+  for (const p of photos) if (p.res && (p.kind === 'back' || p.kind === 'front')) {
+    const back = p.kind === 'back', m = back ? { region: 'heel', id: 'rearp', label: 'Rearfoot angle, standing, from photo (+ valgus)', unit: '°', ref: [-2, 6], note: 'Lower-leg line against the heel line, from the back photo' }
+      : { region: 'fore', id: 'toeout', label: 'Toe-out, from the front photo', unit: '°', ref: [0, 20], note: 'Angle of the foot from straight ahead; a front photo foreshortens the foot, so this is rough' };
+    Object.assign(m, { pair: true, L: { v: p.res.L, photo: p.kind }, R: { v: p.res.R, photo: p.kind }, conf: 'low', view: 'photo', photo: true }); m.note += tail; m.status = statusOf(m); out.push(m);
   }
   return out;
 }
 
-if (typeof module !== 'undefined') module.exports = { archFromPhoto, photoMetrics, gaitPatterns, analyzeSide, analyzeFront, ownSteps, buildMetrics, findPeaks, sg7, stillWindow, prep };
+if (typeof module !== 'undefined') module.exports = { archFromPhoto, legsFromPhoto, photoMetrics, gaitPatterns, analyzeSide, analyzeFront, ownSteps, buildMetrics, findPeaks, sg7, stillWindow, prep };
 
 /* ---------- app ---------- */
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -660,7 +673,7 @@ function renderPanel() {
   let h = `<span class="tag mono" style="--c:${c}">${st ? STX[st] : 'Not measured yet'}</span><h2>${R.name}</h2><p class="dim" style="margin:0 0 8px">${R.sub}</p>`;
   h += ms.map(metHtml).join('');
   if (!ms.length) {
-    if (r === 'heel') h += `<div class="needs">The rearfoot angle needs a clip filmed from behind with both heels in view, trousers rolled above the calves. Add it and this region fills in.</div>`;
+    if (r === 'heel') h += `<div class="needs">The rearfoot angle needs a clip filmed from behind with both heels in view, trousers rolled above the calves, or a standing photo from behind. Add either and this region fills in.</div>`;
     else if (r === 'arch') h += `<div class="needs">Arch height comes from a side photo of each standing foot with an A4 sheet under it, not from walking video. Press <b>Add foot photo</b>, then tap the points as asked.</div>`;
     else h += `<div class="needs">Add a ${RECOMMEND[r]}-view video to measure this region.</div>`;
   } else {
@@ -670,13 +683,13 @@ function renderPanel() {
   }
   const rec = RECOMMEND[r];
   h += `<div class="act"><button class="btn p" data-cap="rec">Record video</button><button class="btn" data-cap="up">Upload video</button>` +
-    `<button class="btn" data-ph="1">Add foot photo</button>` +
+    `<button class="btn" data-ph="${{ heel: 'back', fore: 'front' }[r] || 'arch'}">${{ heel: 'Add back photo', fore: 'Add front photo' }[r] || 'Add foot photo'}</button>` +
     `<button class="btn" id="b-print2">Full report</button></div>`;
   h += `<p class="note" style="margin-top:18px">Typical ranges are standard adult walking values from gait textbooks. Numbers here come from a single 2-D camera, so they can differ from a lab by several degrees. Use them to spot patterns, not to diagnose.</p>`;
   $('#panel').innerHTML = h;
   $('#b-print2').onclick = () => doPrint();
   $$('#panel [data-cap]').forEach(b => b.onclick = () => openCap(b.dataset.cap));
-  $$('#panel [data-ph]').forEach(b => b.onclick = () => openPhoto());
+  $$('#panel [data-ph]').forEach(b => b.onclick = () => openPhoto(b.dataset.ph));
   $$('#panel [data-seek]').forEach(b => b.onclick = () => { const [id, k] = b.dataset.seek.split('|'); seekMetric(id, k); });
 }
 const PV = { consistent: ['Signs consistent', 'flag'], some: ['Some signs', 'watch'], none: ['Not suggested', 'ok'], cant: ['Cannot check yet', null] };
@@ -887,26 +900,38 @@ $('#cap').addEventListener('close', stopStream);
 function doPrint() { $('#rview').hidden = false; $('#rview').scrollTop = 0; renderReport(); }
 $('#b-print').onclick = doPrint; $('#rClose').onclick = () => $('#rview').hidden = true; $('#rPrint').onclick = () => { try { window.print(); } catch (e) { toast('Printing is not available here. Open this page in a browser to print.'); } };
 /* ----- foot photo: tap points on a picture ----- */
-const PH = { img: null, side: 'L', pts: [], steps: [], guess: new Set(), auto: false, drag: -1 };
+const PH = { img: null, kind: 'arch', side: 'L', pts: [], steps: [], guess: new Set(), auto: false, drag: -1 };
 const PH_STEPS = [['refA', 'A4 sheet: tap one end of a long or short edge you chose above'], ['refB', 'A4 sheet: tap the other end of the same edge'],
   ['heel', 'Heel: back of the heel where it meets the floor'], ['toe', 'Longest toe: the tip'], ['ball', 'Ball of the foot: inner side, under the big toe joint, at the floor'],
   ['nav', 'Navicular: the bony bump on the inner mid-foot, just in front of the ankle bone'], ['dors', 'Top of the foot: halfway between heel and toe tip, on the upper surface'],
   ['sole', 'Arch: the highest point of the sole above the floor, under the arch']];
 const phMsg = t => $('#phMsg').textContent = t || '';
-function phSteps() { return $('#phRef').value ? PH_STEPS : PH_STEPS.slice(2); }
-function openPhoto(side) {
-  PH.side = side || ({ L: 'R', R: 'L' }[(St.photos[St.photos.length - 1] || {}).side] || 'L'); $('#phSide').value = PH.side;
-  $('#phWork').hidden = true; phMsg(''); $('#ph').showModal();
-  if (!side) $('#phFile').click();
+const PH_BACK = [['Lcalf', 'Left leg (left of the picture): middle of the lower leg, about a hand above the ankle'], ['Lankle', 'Left leg: middle of the ankle, where the cuff meets the heel'], ['Lheel', 'Left heel: middle of the heel bottom, at the floor'],
+  ['Rcalf', 'Right leg (right of the picture): middle of the lower leg, about a hand above the ankle'], ['Rankle', 'Right leg: middle of the ankle, where the cuff meets the heel'], ['Rheel', 'Right heel: middle of the heel bottom, at the floor']];
+const PH_FRONT = [['Rankle', 'Right leg (left of the picture): middle of the ankle, at the cuff'], ['Rtoe', 'Right foot: tip of the second toe'], ['Lankle', 'Left leg (right of the picture): middle of the ankle, at the cuff'], ['Ltoe', 'Left foot: tip of the second toe']];
+function phSteps() { return PH.kind === 'back' ? PH_BACK : PH.kind === 'front' ? PH_FRONT : $('#phRef').value ? PH_STEPS : PH_STEPS.slice(2); }
+function phKindUi() { const k = $('#phKind').value; PH.kind = k; $('#phSideL').hidden = $('#phRefL').hidden = k !== 'arch'; $('#phAuto').title = k === 'arch' ? 'Needs the heel and toe tip tapped first' : 'Finds the feet and legs in the picture'; }
+function openPhoto(kind, side) {
+  $('#phKind').value = kind || 'arch'; phKindUi(); const last = St.photos.filter(p => (p.kind || 'arch') === 'arch').pop();
+  PH.side = side || ({ L: 'R', R: 'L' }[(last || {}).side] || 'L'); $('#phSide').value = PH.side;
+  $('#phWork').hidden = true; phMsg(''); $('#ph').showModal(); $('#phFile').click();
 }
+$('#phKind').onchange = () => { phKindUi(); PH.pts = []; PH.guess = new Set(); PH.auto = false; phMsg(''); if (PH.img) phDraw(); };
 function phLoad(f) {
   if (!f) return; const url = URL.createObjectURL(f), im = new Image();
   im.onload = () => { PH.img = im; PH.pts = []; PH.guess = new Set(); PH.auto = false; phMsg(''); $('#phWork').hidden = false; const cv = $('#phCv'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.style.maxHeight = '70vh'; cv.style.objectFit = 'contain'; phDraw(); };
   im.onerror = () => phMsg('That picture could not be opened. Try a JPEG or PNG.'); im.src = url;
 }
-function paintPhoto(c, img, pts, steps, s, hollow) {
+function paintPhoto(c, img, pts, steps, s, hollow, kind) {
   c.drawImage(img, 0, 0); const P = {}; pts.forEach((p, i) => P[steps[i][0]] = p);
   c.lineWidth = 2 * s; c.font = `${14 * s}px monospace`;
+  if (kind === 'back' || kind === 'front') {
+    for (const n of 'LR') { const keys = kind === 'back' ? [n + 'calf', n + 'ankle', n + 'heel'] : [n + 'ankle', n + 'toe'], q = keys.map(k => P[k]).filter(Boolean); if (q.length < 2) continue;
+      c.strokeStyle = n === 'R' ? '#ff9d6e' : '#7fe3c4'; c.lineWidth = 3 * s; c.beginPath(); q.forEach((p, i) => i ? c.lineTo(...p) : c.moveTo(...p)); c.stroke(); }
+    pts.forEach((p, i) => { const R = steps[i][0][0] === 'R'; c.fillStyle = R ? '#ff9d6e' : '#7fe3c4'; c.beginPath(); c.arc(p[0], p[1], 6 * s, 0, 7); if (hollow && hollow.has(i)) { c.lineWidth = 3 * s; c.strokeStyle = '#f0c05a'; c.stroke(); } else c.fill();
+      c.lineWidth = 3 * s; c.strokeStyle = '#000'; c.strokeText(steps[i][0], p[0] + 9 * s, p[1] - 8 * s); c.fillStyle = '#fff'; c.fillText(steps[i][0], p[0] + 9 * s, p[1] - 8 * s); });
+    return;
+  }
   if (P.refA && P.refB) { c.strokeStyle = '#f0c05a'; c.beginPath(); c.moveTo(...P.refA); c.lineTo(...P.refB); c.stroke(); }
   if (P.heel && P.toe) { c.strokeStyle = '#7fe3c4'; c.beginPath(); c.moveTo(...P.heel); c.lineTo(...P.toe); c.stroke(); }
   if (P.heel && P.ball) { c.strokeStyle = '#ffffff'; c.setLineDash([6 * s, 5 * s]); c.beginPath(); c.moveTo(...P.heel); c.lineTo(...P.ball); c.stroke(); c.setLineDash([]); }
@@ -915,12 +940,13 @@ function paintPhoto(c, img, pts, steps, s, hollow) {
   pts.forEach((p, i) => { c.fillStyle = '#7fe3c4'; c.beginPath(); c.arc(p[0], p[1], 6 * s, 0, 7); if (hollow && hollow.has(i)) { c.lineWidth = 3 * s; c.strokeStyle = '#f0c05a'; c.stroke(); } else c.fill(); c.lineWidth = 3 * s; c.strokeStyle = '#000'; c.strokeText(steps[i][0], p[0] + 9 * s, p[1] - 8 * s); c.fillStyle = '#fff'; c.fillText(steps[i][0], p[0] + 9 * s, p[1] - 8 * s); });
 }
 function phDraw() {
-  const cv = $('#phCv'), c = cv.getContext('2d'), s = Math.max(cv.width, cv.height) / 900, st = phSteps(); paintPhoto(c, PH.img, PH.pts, st, s, PH.guess);
+  const cv = $('#phCv'), c = cv.getContext('2d'), s = Math.max(cv.width, cv.height) / 900, st = phSteps(); paintPhoto(c, PH.img, PH.pts, st, s, PH.guess, PH.kind);
   const n = PH.pts.length; $('#phStep').textContent = n < st.length ? `Point ${n + 1} of ${st.length}. ${st[n][1]}` : 'All points set. Check them, then save.';
   $('#phSave').disabled = n < st.length;
 }
 function phResult() {
   const st = phSteps(), P = {}; PH.pts.forEach((p, i) => P[st[i][0]] = p);
+  if (PH.kind !== 'arch') return legsFromPhoto(PH.kind, P);
   const refPx = P.refA ? Math.hypot(P.refA[0] - P.refB[0], P.refA[1] - P.refB[1]) : null;
   return archFromPhoto(P, refPx, +$('#phRef').value || null);
 }
@@ -939,6 +965,31 @@ function suggestPoints(img, heel, toe) {
   return { ball: floorAt(tb), nav: at(tn, Math.max(.06, topN * .55)), dors: at(td, topD), sole: at(.42, Math.max(.004, sole(.42))) };
 }
 
+/* auto-place for back and front photos: jeans are blue, bare feet are skin coloured and sit just below the cuffs */
+function autoLegs(img, kind) {
+  const sc = Math.min(1, 500 / img.naturalWidth), W = Math.round(img.naturalWidth * sc), H = Math.round(img.naturalHeight * sc), cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, W, H); const D = g.getImageData(0, 0, W, H).data;
+  const rgb = (x, y) => { const i = (y * W + x) * 4; return [D[i], D[i + 1], D[i + 2]]; };
+  const blue = (x, y) => { const [r, gg, b] = rgb(x, y); return b > r + 16 && b > gg + 4 && r + gg + b > 270; };
+  const skin = (x, y) => { const [r, gg, b] = rgb(x, y); return r > gg + 6 && gg > b - 4 && r - b > 24 && r + gg + b < 640 && !(b > r + 10); };
+  const x0 = Math.round(W * .15), x1 = Math.round(W * .85); let yj = -1;
+  for (let y = 0; y < H; y++) { let n = 0; for (let x = x0; x < x1; x++) if (blue(x, y)) n++; if (n > W * .03) yj = y; }
+  if (yj < 0) return null;
+  const ya = Math.max(0, yj - Math.round(H * .02)), yb = Math.min(H - 1, yj + Math.round(H * .14)), lab = new Int32Array(W * H), comps = [];
+  for (let y = ya; y <= yb; y++) for (let x = x0; x < x1; x++) { if (lab[y * W + x] || !skin(x, y)) continue;
+    const id = comps.length + 1, st = [[x, y]], c = { px: [], x0: x, x1: x, y0: y, y1: y }; lab[y * W + x] = id;
+    while (st.length) { const [cx, cy] = st.pop(); c.px.push([cx, cy]); c.x0 = Math.min(c.x0, cx); c.x1 = Math.max(c.x1, cx); c.y0 = Math.min(c.y0, cy); c.y1 = Math.max(c.y1, cy);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = cx + dx, ny = cy + dy; if (nx >= x0 && nx < x1 && ny >= ya && ny <= yb && !lab[ny * W + nx] && skin(nx, ny)) { lab[ny * W + nx] = id; st.push([nx, ny]); } } }
+    comps.push(c); }
+  const big = comps.filter(c => c.px.length > W * H * .0006).sort((a, b) => b.px.length - a.px.length).slice(0, 2).sort((a, b) => (a.x0 + a.x1) - (b.x0 + b.x1)); if (big.length < 2) return null;
+  const avgX = (c, lo, hi) => { let s = 0, n = 0; for (const [x, y] of c.px) if (y >= lo && y <= hi) { s += x; n++; } return n ? s / n : (c.x0 + c.x1) / 2; }, o = [];
+  for (const c of big) { const h = c.y1 - c.y0, top = [avgX(c, c.y0, c.y0 + h * .15), c.y0 + h * .08], bot = [avgX(c, c.y1 - h * .12, c.y1), c.y1];
+    if (kind === 'front') { o.push(top, bot); continue; }
+    const yc = Math.max(0, top[1] - H * .12); let l = Math.round(top[0]), r = l; while (l > 0 && blue(l - 1, Math.round(yc))) l--; while (r < W - 1 && blue(r + 1, Math.round(yc))) r++;
+    o.push([r - l > 4 ? (l + r) / 2 : top[0], yc], top, bot); }
+  return o.map(p => [p[0] / sc, p[1] / sc]);
+}
+
 $('#phGal').onclick = () => $('#phFile').click(); $('#phCamB').onclick = () => $('#phCam').click(); $('#phX').onclick = () => $('#ph').close();
 $('#phFile').onchange = e => { phLoad(e.target.files[0]); e.target.value = ''; }; $('#phCam').onchange = e => { phLoad(e.target.files[0]); e.target.value = ''; };
 $('#phRef').onchange = () => { PH.pts = []; if (PH.img) phDraw(); };
@@ -953,17 +1004,18 @@ $('#phCv').addEventListener('pointerdown', e => {
 $('#phCv').addEventListener('pointermove', e => { if (PH.drag < 0) return; const q = phPos(e); PH.pts[PH.drag] = [Math.max(0, Math.min(q.w, q.x)), Math.max(0, Math.min(q.h, q.y))]; PH.guess.delete(PH.drag); phDraw(); });
 $('#phCv').addEventListener('pointerup', () => { PH.drag = -1; });
 $('#phAuto').onclick = () => {
+  if (PH.kind !== 'arch') { const o = autoLegs(PH.img, PH.kind); if (!o) { phMsg('Could not find the legs and bare feet automatically. Tap the points instead.'); return; }
+    PH.pts = o; PH.guess = new Set(o.map((_, i) => i)); PH.auto = true; phMsg('Points placed from the picture. Drag any hollow point onto the right spot, then save.'); phDraw(); return; }
   const st = phSteps(), ih = st.findIndex(s => s[0] === 'heel'), it = st.findIndex(s => s[0] === 'toe');
   if (PH.pts.length < it + 1) { phMsg('Tap the heel and the longest toe tip first, then press Auto-place.'); return; }
   const sg = suggestPoints(PH.img, PH.pts[ih], PH.pts[it]); PH.pts = PH.pts.slice(0, it + 1).concat([sg.ball, sg.nav, sg.dors, sg.sole]); PH.guess = new Set([it + 1, it + 2, it + 3, it + 4]); PH.auto = true;
   phMsg('Points placed from the picture. Drag any hollow point onto the right spot, then save.'); phDraw(); };
 $('#phSave').onclick = () => {
-  const res = phResult(), side = $('#phSide').value, warn = []; res.auto = PH.auto;
-  if (res.dorsAt < .4 || res.dorsAt > .6) warn.push('the top-of-foot point was not near halfway, so the arch height index is rougher');
-  if (res.navAt < .2 || res.navAt > .6) warn.push('the navicular point looks out of place');
-  const keep = PH.img; St.photos = St.photos.filter(p => p.side !== side); St.photos.push({ side, img: keep, res, pts: PH.pts.slice(), steps: phSteps() });
+  const res = phResult(), kind = PH.kind, side = $('#phSide').value, warn = []; res.auto = PH.auto;
+  if (kind === 'arch') { if (res.dorsAt < .4 || res.dorsAt > .6) warn.push('the top-of-foot point was not near halfway, so the arch height index is rougher'); if (res.navAt < .2 || res.navAt > .6) warn.push('the navicular point looks out of place'); }
+  St.photos = St.photos.filter(p => kind === 'arch' ? !((p.kind || 'arch') === 'arch' && p.side === side) : p.kind !== kind); St.photos.push({ kind, side: kind === 'arch' ? side : null, img: PH.img, res, pts: PH.pts.slice(), steps: phSteps() });
   compute(); renderHeader(); renderModel(); renderPanel(); renderCharts(); $('#ph').close();
-  toast(`Arch measured on the ${side === 'L' ? 'left' : 'right'} foot${warn.length ? ': ' + warn[0] : ''}`, 5000);
+  toast(kind === 'arch' ? `Arch measured on the ${side === 'L' ? 'left' : 'right'} foot${warn.length ? ': ' + warn[0] : ''}` : kind === 'back' ? 'Rearfoot angle measured from the back photo' : 'Toe-out measured from the front photo', 5000);
 };
 
 /* ----- start ----- */
@@ -1017,9 +1069,14 @@ async function frameShot(ci, view, f, region, side) {
   return cv.toDataURL('image/jpeg', .86);
 }
 function photoShot(p) {
-  const im = p.img, sc = Math.min(1, 900 / Math.max(im.naturalWidth, im.naturalHeight)), cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
-  paintPhoto(cv.getContext('2d'), im, p.pts, p.steps, Math.max(cv.width, cv.height) / 900);
-  const o = document.createElement('canvas'); o.width = Math.round(cv.width * sc); o.height = Math.round(cv.height * sc); o.getContext('2d').drawImage(cv, 0, 0, o.width, o.height); return o.toDataURL('image/jpeg', .86);
+  const im = p.img, cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; let box = [0, 0, cv.width, cv.height];
+  if (p.kind === 'back' || p.kind === 'front') {   // legs and feet are small in these photos, so crop in on them
+    const xs = p.pts.map(q => q[0]), ys = p.pts.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), m = Math.max(x1 - x0, y1 - y0) * .5 + 60;
+    let w = (x1 - x0) + 2 * m, h = w * 4 / 3; if (y1 - y0 + 2 * m > h) { h = y1 - y0 + 2 * m; w = h * 3 / 4; } w = Math.min(w, cv.width); h = Math.min(h, cv.height);
+    box = [Math.max(0, Math.min(cv.width - w, (x0 + x1) / 2 - w / 2)), Math.max(0, Math.min(cv.height - h, (y0 + y1) / 2 - h / 2)), w, h]; }
+  paintPhoto(cv.getContext('2d'), im, p.pts, p.steps, Math.max(1, box[2] / 700), null, p.kind);
+  const sc = Math.min(1, 900 / Math.max(box[2], box[3])), o = document.createElement('canvas'); o.width = Math.round(box[2] * sc); o.height = Math.round(box[3] * sc);
+  o.getContext('2d').drawImage(cv, box[0], box[1], box[2], box[3], 0, 0, o.width, o.height); return o.toDataURL('image/jpeg', .86);
 }
 function regionShots(r) {
   const out = [], seen = [];
@@ -1069,9 +1126,12 @@ async function renderReport() {
   const nm = $('#pname').value || 'Patient', date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
   const ms = St.metrics, bad = ms.filter(m => m.status !== 'ok'), regions = RORDER.filter(r => regionMetrics(r).length);
   /* pictures first (they take a moment) */
-  const shots = {}; let total = 0, done = 0; regions.forEach(r => { if (r !== 'arch') total += regionShots(r).length; else total += St.photos.filter(p => p.res).length; });
+  const phKind = { arch: 'arch', heel: 'back', fore: 'front' }, phOf = r => St.photos.filter(p => p.res && (p.kind || 'arch') === phKind[r]);
+  const phCap = p => (p.kind || 'arch') === 'arch' ? (p.side === 'L' ? 'Left' : 'Right') + ' foot, inner side, with the measuring points' : p.kind === 'back' ? 'Back of the legs, with the measuring lines' : 'Front of the legs, with the measuring lines';
+  const shots = {}; let total = 0, done = 0; regions.forEach(r => { total += (r === 'arch' ? 0 : regionShots(r).length) + phOf(r).length; });
   for (const r of regions) { shots[r] = [];
-    if (r === 'arch') { for (const p of St.photos.filter(p => p.res)) { try { shots[r].push({ src: photoShot(p), cap: (p.side === 'L' ? 'Left' : 'Right') + ' foot, inner side, with the measuring points' }); } catch (e) {} say(`Preparing pictures ${++done} of ${total}…`); } continue; }
+    for (const p of phOf(r)) { try { shots[r].push({ src: photoShot(p), cap: phCap(p) }); } catch (e) { console.warn(e); } say(`Preparing pictures ${++done} of ${total}…`); }
+    if (r === 'arch') continue;
     for (const s of regionShots(r)) { let src = null; try { src = await frameShot(s.ci, s.view, s.f, r, s.side); } catch (e) { console.warn(e); }
       if (renderReport.tok !== token) return; if (src) shots[r].push({ src, cap: `${s.cap} · ${s.t.toFixed(1)} s` }); say(`Preparing pictures ${++done} of ${total}…`); } }
   if (renderReport.tok !== token) return;
@@ -1103,7 +1163,7 @@ async function renderReport() {
       <div class="r-right">${shots[r].length ? `<div class="r-shots${shots[r].length === 1 ? ' one' : ''}">${shots[r].map(s => `<figure><img src="${s.src}" alt=""><figcaption>${rEsc(s.cap)}</figcaption></figure>`).join('')}</div>` : ''}
       ${defs.map(d => `<div class="r-chart"><div>${rEsc(d.t)}</div>${chartSvg(d, { print: true }).svg}</div>`).join('')}</div></div></section>`;
   }
-  const miss = []; if (St.clipOf.back == null) miss.push('rearfoot alignment (needs a view from behind)'); if (!St.photos.some(p => p.res)) miss.push('arch and foot posture (needs a side photo of each foot)');
+  const miss = []; if (St.clipOf.back == null && !St.photos.some(p => p.res && p.kind === 'back')) miss.push('rearfoot alignment (needs a view or photo from behind)'); if (!St.photos.some(p => p.res && (p.kind || 'arch') === 'arch')) miss.push('arch and foot posture (needs a side photo of each foot)');
   h += `<section class="r-pat"><h2>Walking patterns checked</h2><table><tr><th>Pattern</th><th>Result</th><th>Signs found</th></tr>` + pats.map(p => `<tr><td>${p.name}</td><td class="r-pv" style="--c:${p.verdict === 'consistent' ? RCOL.flag : p.verdict === 'some' ? RCOL.watch : '#667'}">${PV[p.verdict][0]}</td><td>${p.signs.filter(s => s.state).map(s => rEsc(s.label.toLowerCase()) + ' (' + rEsc(s.value) + ')').join('; ') || '-'}</td></tr>`).join('') +
     `</table><div class="fine">Pattern hints are screening rules of thumb, not validated cut-offs and not a diagnosis.</div></section>`;
   h += `<section class="r-all"><h2>All measurements</h2>${miss.length ? `<div class="fine" style="margin:0 0 6px">Not measured yet: ${miss.join('; ')}.</div>` : ''}<table><tr><th>Region</th><th>Measure</th><th>Value</th><th>Unit</th><th>Typical</th><th>Reading</th></tr>` +

@@ -93,7 +93,7 @@ dialog::backdrop{background:#000a}
 #report{max-width:920px;margin:0 auto;padding:20px 20px 48px;font-family:'Space Grotesk',Arial,sans-serif;color:#111;font-size:13px}
 #report h1{font-size:24px;margin:0 0 2px}#report h2{font-size:13px;margin:20px 0 6px;letter-spacing:.1em;text-transform:uppercase}
 #report table{width:100%;border-collapse:collapse;font-size:12px}#report td,#report th{border-bottom:1px solid #ccc;padding:5px 6px;text-align:left}
-#report .st{font-weight:700}#report .f{color:#b43a14}#report svg{width:100%;height:46mm;margin-bottom:6px}
+#report .st{font-weight:700}#report .f{color:#b43a14}#report svg{width:100%}
 #report .fine{font-size:11px;color:#555;margin-top:12px}
 @media (max-width:1180px){main{grid-template-columns:1fr}.col{border-right:0;border-bottom:1px solid var(--ln)}.model{height:600px;max-width:520px;margin:0 auto}.panel{padding:20px}}
 @media print{
@@ -108,6 +108,41 @@ dialog::backdrop{background:#000a}
 .mk{flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ln2);font-size:13px}
 .mk.yes{border-color:var(--org);color:var(--org)}.mk.no{color:var(--dim)}.mk.na{border-style:dashed;color:var(--dim)}
 dialog{max-height:94vh;overflow:auto}
+
+/* report */
+#report{-webkit-print-color-adjust:exact;print-color-adjust:exact;max-width:860px;font-size:12.5px;line-height:1.4}
+#report h2{margin:0}
+.r-wait{padding:80px 0;text-align:center;color:#555;font-size:15px}
+.r-cover{padding-bottom:18px;border-bottom:1px solid #d6dcdd;break-after:page}
+.r-band{display:flex;justify-content:space-between;background:#0b1413;color:#7fe3c4;padding:10px 16px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.r-cover h1{font-size:34px;margin:18px 0 0;font-weight:600;letter-spacing:-.01em}.r-date{color:#667;margin-bottom:14px}
+.r-glance{display:grid;grid-template-columns:200px 1fr;gap:22px;align-items:start}
+.r-map{height:300px;width:auto;display:block;margin:0 auto}.r-mapbox{background:#f3f7f6;border:1px solid #dfe7e5;padding:10px}
+.r-leg{font-size:10px;color:#556;text-align:center;margin-top:6px}.r-leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px 0 8px}
+.r-big{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.r-big div{border-top:4px solid var(--c);background:#f6f9f8;padding:8px 10px;font-size:11px;color:#445}
+.r-big b{display:block;font-size:30px;line-height:1.05;color:var(--c);font-family:'JetBrains Mono',monospace}
+.r-side h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#445;margin:12px 0 6px}
+.r-top{list-style:none;margin:0;padding:0}.r-top li{border-left:4px solid var(--c);padding:3px 0 3px 10px;margin-bottom:6px;background:#fafcfc}.r-top b{display:block;font-size:12.5px}.r-top span{color:#445;font-size:12px}
+.r-ok{color:#0a8f72;font-weight:600;margin:0}.r-chips{display:flex;flex-wrap:wrap;gap:6px}.r-chips span{border:1px solid var(--c);color:var(--c);padding:3px 9px;font-size:11.5px;font-weight:600}
+.r-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:18px}.r-tiles div{border-left:4px solid var(--c);background:#f6f9f8;padding:7px 9px}.r-tiles b{display:block;font-size:12px}.r-tiles span{font-size:11px;color:#556}
+.r-reg{break-inside:avoid;page-break-inside:avoid;padding:16px 0 14px;border-bottom:1px solid #d6dcdd}
+.r-rh{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid var(--c);padding-bottom:6px;margin-bottom:12px}.r-rh h2{font-size:21px;font-weight:600;letter-spacing:0;text-transform:none}.r-rh p{margin:2px 0 0;color:#556;font-size:12px}
+.r-rh>span{color:var(--c);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.r-cols{display:grid;grid-template-columns:42% 1fr;gap:20px;align-items:start}
+.r-met{border-left:4px solid var(--c);background:#f8fafa;padding:7px 10px 8px;margin-bottom:8px}.r-mh{display:flex;justify-content:space-between;gap:8px}.r-mh b{font-size:12.5px}.r-mh i{font-style:normal;font-size:10.5px;color:var(--c);font-weight:700;white-space:nowrap}
+.r-mv{margin:3px 0 2px;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600}.r-mv small{font-size:12px;color:#667;margin-left:4px}.r-vl{color:#0a8f72;margin-right:14px}.r-vr{color:#d9560f}.r-vs{color:#111}
+.r-bar{position:relative;height:6px;background:#dfe5e6;margin:6px 0}.r-bar u{position:absolute;top:0;bottom:0;background:#9fd8c8}.r-bar s{position:absolute;top:-3px;width:5px;height:12px;margin-left:-2px;border:1px solid #fff}
+.r-mn{font-size:11px;color:#556}.r-why{font-size:11.5px;color:var(--c);font-weight:600;margin-top:3px}
+.r-say{margin-top:10px;padding:8px 10px;background:#0b1413;color:#dff3ec;font-size:12px}
+.r-shots{display:grid;grid-template-columns:1fr 1fr;gap:8px}.r-shots.one{grid-template-columns:1fr;max-width:70%}.r-shots figure{margin:0;border:1px solid #cfd8d6;background:#0b1413}
+.r-shots img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}.r-shots figcaption{padding:4px 7px;font-size:10px;color:#cfe;font-family:'JetBrains Mono',monospace;line-height:1.3}
+.r-chart{margin-top:10px;font-size:11px;color:#445}.r-chart svg{height:34mm}
+.r-pat,.r-all{padding-top:18px;break-inside:avoid}.r-pat h2,.r-all h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}.r-pv{font-weight:700;color:var(--c)}
+@media print{#report{max-width:none;padding:0}.r-cover h1{font-size:30px}}
+.r-two{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:20px}.r-two h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#445;margin:0 0 6px}
+.r-good{list-style:none;margin:0;padding:0}.r-good li{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #e3e9e8;padding:5px 0}.r-good b{font-size:12px}.r-good span{font-family:'JetBrains Mono',monospace;color:#0a8f72;font-size:12px;white-space:nowrap}
+.r-lr{margin-bottom:8px;font-size:11.5px}.r-lr>div:first-child{display:flex;justify-content:space-between}.r-lr i{font-style:normal;color:#667}
+.r-l,.r-r{height:6px;background:#e6ecec;margin-top:3px}.r-l u,.r-r u{display:block;height:100%}.r-l u{background:#0a8f72}.r-r u{background:#d9560f}
 </style></head><body>
 <div id="app">
 <header>
@@ -849,22 +884,8 @@ $('#recGo').onclick = () => {
 $('#cap').addEventListener('close', stopStream);
 
 /* ----- report ----- */
-function doPrint() { renderReport(); $('#rview').hidden = false; $('#rview').scrollTop = 0; }
+function doPrint() { $('#rview').hidden = false; $('#rview').scrollTop = 0; renderReport(); }
 $('#b-print').onclick = doPrint; $('#rClose').onclick = () => $('#rview').hidden = true; $('#rPrint').onclick = () => { try { window.print(); } catch (e) { toast('Printing is not available here. Open this page in a browser to print.'); } };
-function renderReport() {
-  const nm = $('#pname').value || 'Patient', ms = St.metrics, bad = ms.filter(m => m.status !== 'ok');
-  const val = m => m.pair ? `L ${f1(m.L.v, m.unit === '×' ? 2 : 1)} · R ${f1(m.R.v, m.unit === '×' ? 2 : 1)}` : f1(m.S.v, m.unit === 's' || m.unit === '×' ? 2 : 1);
-  let h = `<h1>FootScope movement analysis</h1><div>${nm} · ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} · clips: ${St.clips.map(c => c.name).join(', ')}</div>`;
-  h += `<h2>Summary</h2>` + (bad.length ? '<ul>' + bad.map(m => `<li><b>${REG[m.region].name}, ${m.label.toLowerCase()}:</b> ${val(m)} ${m.unit}. ${m.why.join('; ')}.</li>`).join('') + '</ul>' : '<div>Everything measured is inside the typical range.</div>');
-  { const ps = gaitPatterns(ms).filter(p => p.verdict === 'consistent' || p.verdict === 'some'); h += `<h2>Gait pattern signs</h2>` + (ps.length ? '<ul>' + ps.map(p => `<li><b>${p.name}</b> (${PV[p.verdict][0].toLowerCase()}): ` + p.signs.filter(s => s.state).map(s => `${s.label.toLowerCase()} (${s.value})`).join('; ') + '.</li>').join('') + '</ul>' : '<div>No walking pattern stood out among those that could be checked.</div>') + `<div class="fine">Pattern signs are screening hints from simple rules of thumb. They point to what is worth examining, and are not a diagnosis.</div>`; }
-  const missing = []; if (St.clipOf.back == null) missing.push('rearfoot alignment (needs a back view)'); if (!St.photos.some(p => p.res)) missing.push('arch and foot posture (needs a side photo of each foot)'); h += `<div class="fine">Not measured yet: ${missing.join('; ')}.</div>`;
-  h += `<h2>Measurements</h2><table><tr><th>Region</th><th>Measure</th><th>Value</th><th>Unit</th><th>Typical</th><th>Reading</th></tr>` + ms.map(m => `<tr><td>${REG[m.region].name}</td><td>${m.label}</td><td>${val(m)}</td><td>${m.unit}</td><td>${m.ref ? m.ref[0] + ' to ' + m.ref[1] : ''}</td><td class="st ${m.status === 'ok' ? '' : 'f'}">${STX[m.status]}${m.why.length ? ': ' + m.why.join('; ') : ''}</td></tr>`).join('') + '</table>';
-  h += `<h2>Curves</h2>`; ['knee', 'hip', 'ankle'].forEach(r => chartDefs(r).forEach(d => { h += `<div style="font-size:11px">${d.t}</div>` + chartSvg(d, { print: true }).svg; }));
-  h += `<div class="fine">Typical ranges are standard adult walking values from gait textbooks (for example Perry and Burnfield, Gait Analysis: Normal and Pathological Function). Values come from a single 2-D camera and automatic landmark detection and can differ from a lab measurement by several degrees; ankle and foot figures are the roughest. This screening report is not a diagnosis.</div>`;
-  $('#report').innerHTML = h;
-}
-
-
 /* ----- foot photo: tap points on a picture ----- */
 const PH = { img: null, side: 'L', pts: [], steps: [] };
 const PH_STEPS = [['refA', 'A4 sheet: tap one end of a long or short edge you chose above'], ['refB', 'A4 sheet: tap the other end of the same edge'],
@@ -883,14 +904,18 @@ function phLoad(f) {
   im.onload = () => { PH.img = im; PH.pts = []; $('#phWork').hidden = false; const cv = $('#phCv'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.style.maxHeight = '70vh'; cv.style.objectFit = 'contain'; phDraw(); };
   im.onerror = () => phMsg('That picture could not be opened. Try a JPEG or PNG.'); im.src = url;
 }
-function phDraw() {
-  const cv = $('#phCv'), c = cv.getContext('2d'), s = Math.max(cv.width, cv.height) / 900, st = phSteps(); c.drawImage(PH.img, 0, 0);
-  const P = {}; PH.pts.forEach((p, i) => P[st[i][0]] = p);
+function paintPhoto(c, img, pts, steps, s) {
+  c.drawImage(img, 0, 0); const P = {}; pts.forEach((p, i) => P[steps[i][0]] = p);
   c.lineWidth = 2 * s; c.font = `${14 * s}px monospace`;
   if (P.refA && P.refB) { c.strokeStyle = '#f0c05a'; c.beginPath(); c.moveTo(...P.refA); c.lineTo(...P.refB); c.stroke(); }
   if (P.heel && P.toe) { c.strokeStyle = '#7fe3c4'; c.beginPath(); c.moveTo(...P.heel); c.lineTo(...P.toe); c.stroke(); }
   if (P.heel && P.ball) { c.strokeStyle = '#ffffff'; c.setLineDash([6 * s, 5 * s]); c.beginPath(); c.moveTo(...P.heel); c.lineTo(...P.ball); c.stroke(); c.setLineDash([]); }
-  PH.pts.forEach((p, i) => { c.fillStyle = '#7fe3c4'; c.beginPath(); c.arc(p[0], p[1], 6 * s, 0, 7); c.fill(); c.fillStyle = '#fff'; c.fillText(st[i][0], p[0] + 9 * s, p[1] - 8 * s); });
+  if (P.nav && P.heel && P.ball) { const d = P.ball[0] - P.heel[0], e = P.ball[1] - P.heel[1], L2 = d * d + e * e, t = ((P.nav[0] - P.heel[0]) * d + (P.nav[1] - P.heel[1]) * e) / L2, q = [P.heel[0] + t * d, P.heel[1] + t * e];
+    c.strokeStyle = '#ff9d6e'; c.beginPath(); c.moveTo(...P.nav); c.lineTo(...q); c.stroke(); }
+  pts.forEach((p, i) => { c.fillStyle = '#7fe3c4'; c.beginPath(); c.arc(p[0], p[1], 6 * s, 0, 7); c.fill(); c.lineWidth = 3 * s; c.strokeStyle = '#000'; c.strokeText(steps[i][0], p[0] + 9 * s, p[1] - 8 * s); c.fillStyle = '#fff'; c.fillText(steps[i][0], p[0] + 9 * s, p[1] - 8 * s); });
+}
+function phDraw() {
+  const cv = $('#phCv'), c = cv.getContext('2d'), s = Math.max(cv.width, cv.height) / 900, st = phSteps(); paintPhoto(c, PH.img, PH.pts, st, s);
   const n = PH.pts.length; $('#phStep').textContent = n < st.length ? `Point ${n + 1} of ${st.length}. ${st[n][1]}` : 'All points set. Check them, then save.';
   $('#phSave').disabled = n < st.length;
 }
@@ -912,7 +937,7 @@ $('#phSave').onclick = () => {
   const res = phResult(), side = $('#phSide').value, warn = [];
   if (res.dorsAt < .4 || res.dorsAt > .6) warn.push('the top-of-foot point was not near halfway, so the arch height index is rougher');
   if (res.navAt < .2 || res.navAt > .6) warn.push('the navicular point looks out of place');
-  const keep = PH.img; St.photos = St.photos.filter(p => p.side !== side); St.photos.push({ side, img: keep, res });
+  const keep = PH.img; St.photos = St.photos.filter(p => p.side !== side); St.photos.push({ side, img: keep, res, pts: PH.pts.slice(), steps: phSteps() });
   compute(); renderHeader(); renderModel(); renderPanel(); renderCharts(); $('#ph').close();
   toast(`Arch measured on the ${side === 'L' ? 'left' : 'right'} foot${warn.length ? ': ' + warn[0] : ''}`, 5000);
 };
@@ -926,5 +951,141 @@ $('#phSave').onclick = () => {
   $('#pname').onchange = () => { try { localStorage.setItem('fs-studio-name', $('#pname').value); } catch (e) {} };
   window.__st = St; window.__setRegion = setRegion; window.__analyzeFile = analyzeFile;
 })();
+
+/* ---------- report: cover, one page per body region (values left, pictures right), patterns, table ---------- */
+const RCOL = { ok: '#0a8f72', watch: '#c98a00', flag: '#d9480f' }, RORDER = ['hip', 'knee', 'ankle', 'heel', 'arch', 'fore', 'gait'];
+const RSAY = { ok: 'Inside the typical range', watch: 'Worth a look', flag: 'Needs attention' };
+const repVids = {};
+function repVideo(ci) {
+  const c = St.clips[ci]; if (repVids[c.url]) return repVids[c.url];
+  const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = c.url;
+  v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none'; document.body.appendChild(v); return repVids[c.url] = v;
+}
+async function repReady(v) { for (let i = 0; i < 80 && !(v.readyState >= 2 && v.videoWidth); i++) await new Promise(r => setTimeout(r, 100)); return v.readyState >= 2; }
+
+/* a picture of one moment: the person cropped out of the frame, with the skeleton and angle labels for the region */
+async function frameShot(ci, view, f, region, side) {
+  const c = St.clips[ci]; if (!c) return null; const R = layoutRects(c); if (!c.tracks[view] || !R[view]) return null;
+  const v = repVideo(ci); if (!(await repReady(v))) return null;
+  const P = c.tracks[view], tt = Math.max(0, Math.min(Math.round(f), P.T - 1)), [ox, w, h] = R[view];
+  try { await seekTo(v, tt / FPS); } catch (e) { return null; }
+  const X = k => ox + P[k].x[tt] / c.views[view].w * w, Y = k => P[k].y[tt] / c.views[view].h * h;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (let k = 0; k <= 32; k++) { const x = X(k), y = Y(k); if (isFinite(x) && isFinite(y)) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }
+  if (!isFinite(x0)) return null;
+  let bh = (y1 - y0) * 1.3, bw = bh * .75; if ((x1 - x0) * 1.35 > bw) { bw = (x1 - x0) * 1.35; bh = bw / .75; }
+  bh = Math.min(bh, h); bw = bh * .75; if (bw > w) { bw = w; bh = bw / .75; }
+  let sx = (x0 + x1) / 2 - bw / 2, sy = (y0 + y1) / 2 - bh / 2; sx = Math.max(ox, Math.min(ox + w - bw, sx)); sy = Math.max(0, Math.min(h - bh, sy));
+  const OW = 420, OH = 560, k0 = OW / bw, cv = document.createElement('canvas'); cv.width = OW; cv.height = OH; const g = cv.getContext('2d');
+  g.drawImage(v, sx, sy, bw, bh, 0, 0, OW, OH);
+  const tx = k => (X(k) - sx) * k0, ty = k => (Y(k) - sy) * k0, hot = new Set(REG[region].joints), col = k => k % 2 ? '#e8590c' : '#00a884';
+  g.fillStyle = 'rgba(8,16,15,.22)'; g.fillRect(0, 0, OW, OH); g.lineCap = 'round';
+  for (const [a, b] of EDG) { const on = hot.has(a) || hot.has(b); g.strokeStyle = on ? (col(a) === col(b) ? col(a) : '#ddd') : 'rgba(255,255,255,.55)'; g.lineWidth = on ? 5 : 2.5; g.beginPath(); g.moveTo(tx(a), ty(a)); g.lineTo(tx(b), ty(b)); g.stroke(); }
+  for (let k = 23; k <= 32; k++) { const on = hot.has(k); g.fillStyle = on ? col(k) : 'rgba(255,255,255,.8)'; g.beginPath(); g.arc(tx(k), ty(k), on ? 8 : 4.5, 0, 7); g.fill(); if (on) { g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke(); } }
+  const lab = (k, txt, n) => { g.font = '700 22px JetBrains Mono, monospace'; g.textBaseline = 'middle'; const x = tx(k) + (n === 'R' ? 16 : -16), y = ty(k); g.textAlign = n === 'R' ? 'left' : 'right';
+    g.lineWidth = 6; g.strokeStyle = '#0b1413'; g.strokeText(txt, x, y); g.fillStyle = n === 'R' ? '#ffb48a' : '#7fe3c4'; g.fillText(txt, x, y); };
+  const A = St.an[ci] && St.an[ci][view]; const legs = side === 'L' || side === 'R' ? [side] : ['L', 'R'];
+  if (A && view === 'side' && A.leg) for (const n of legs) { const j = J[n], r = A.leg[n];
+    if (region === 'knee') lab(j.knee, f1(r.kf[tt], 0) + '°', n); else if (region === 'ankle') lab(j.ank, f1(r.af[tt], 0) + '°', n); else if (region === 'hip') lab(j.hip, f1(r.thigh[tt], 0) + '°', n); }
+  if (A && view !== 'side') {
+    if (region === 'hip' && A.pel) { g.strokeStyle = '#f0c05a'; g.lineWidth = 3; g.setLineDash([8, 6]); g.beginPath(); g.moveTo(tx(23), ty(23)); g.lineTo(tx(24), ty(24)); g.stroke(); g.setLineDash([]); lab(24, f1(A.pel[tt], 1) + '°', 'R'); }
+    if (region === 'heel' && A.rear) for (const n of legs) { const q = A.rear(n, tt); if (isFinite(q)) lab(J[n].ank, f1(q, 0) + '°', n); }
+  }
+  return cv.toDataURL('image/jpeg', .86);
+}
+function photoShot(p) {
+  const im = p.img, sc = Math.min(1, 900 / Math.max(im.naturalWidth, im.naturalHeight)), cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+  paintPhoto(cv.getContext('2d'), im, p.pts, p.steps, Math.max(cv.width, cv.height) / 900);
+  const o = document.createElement('canvas'); o.width = Math.round(cv.width * sc); o.height = Math.round(cv.height * sc); o.getContext('2d').drawImage(cv, 0, 0, o.width, o.height); return o.toDataURL('image/jpeg', .86);
+}
+function regionShots(r) {
+  const out = [], seen = [];
+  for (const m of regionMetrics(r).filter(m => !m.photo)) for (const k of (m.pair ? ['L', 'R'] : ['S'])) {
+    if (out.length >= 4) break; const x = k === 'S' ? m.S : m[k]; if (!x || x.frame == null || x.clip == null || !St.clips[x.clip]) continue;
+    const c = St.clips[x.clip], view = c.tracks[m.view] ? m.view : Object.keys(c.tracks)[0]; if (!view) continue;
+    const key = x.clip + '|' + view + '|' + Math.round(x.frame / 3) + '|' + k; if (seen.includes(key)) continue; seen.push(key);
+    out.push({ ci: x.clip, view, f: x.frame, side: k === 'S' ? null : k, cap: m.label.replace(/\s*\(.*?\)\s*$/, '') + (k === 'S' ? '' : (k === 'L' ? ', left' : ', right')), t: x.frame / FPS });
+  }
+  return out;
+}
+
+/* little pieces of html */
+const rEsc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const rDec = m => ['×', 's'].includes(m.unit) ? 2 : 1;
+function rBar(m) {
+  const vals = m.pair ? [['L', m.L.v], ['R', m.R.v]] : [['', m.S.v]]; if (!m.ref) return '';
+  const [lo, hi] = m.ref, span = hi - lo, a = lo - span * .8, b = hi + span * .8, pc = x => Math.max(0, Math.min(100, (x - a) / (b - a) * 100));
+  return `<div class="r-bar"><u style="left:${pc(lo)}%;width:${pc(hi) - pc(lo)}%"></u>` + vals.map(([n, v]) => `<s style="left:${pc(v)}%;background:${n === 'R' ? '#d9560f' : n === 'L' ? '#0a8f72' : '#222'}"></s>`).join('') + '</div>';
+}
+function rMetric(m) {
+  const iu = m.unit.startsWith('°') ? '°' : m.unit.startsWith('%') ? '%' : m.unit, d = rDec(m);
+  const v = m.pair ? `<span class="r-vl">L ${f1(m.L.v, d)}</span><span class="r-vr">R ${f1(m.R.v, d)}</span>` : `<span class="r-vs">${f1(m.S.v, d)}</span>`;
+  return `<div class="r-met" style="--c:${RCOL[m.status]}"><div class="r-mh"><b>${rEsc(m.label)}</b><i>${RSAY[m.status]}</i></div>
+  <div class="r-mv">${v}<small>${rEsc(iu)}</small></div>${rBar(m)}
+  <div class="r-mn">${m.ref ? `Typical ${m.ref[0]} to ${m.ref[1]}. ` : ''}${rEsc(m.note || '')}</div>${m.why.length ? `<div class="r-why">${rEsc(m.why.join('; '))}</div>` : ''}</div>`;
+}
+const SAYS = {
+  hip: ['Thigh swing, pelvis level and trunk position all sit in the typical range.', 'Pelvis or thigh movement is outside the typical range in places.'],
+  knee: ['The knee bends and straightens through the stride as expected.', 'Knee movement differs from the typical range in places.'],
+  ankle: ['The ankle moves through its usual range from heel strike to push-off.', 'Ankle movement differs from the typical range in places.'],
+  heel: ['The heel stays in a typical alignment against the lower leg.', 'The heel tilts more than typical against the lower leg.'],
+  arch: ['The arch measures inside the typical range.', 'The arch measures outside the typical range. These are photo estimates, so confirm on examination.'],
+  fore: ['Stance time, step length and base of support look typical.', 'Stance, step length or base of support is outside the typical range in places.'],
+  gait: ['Rhythm and step-to-step consistency look typical.', 'Rhythm or consistency is outside the typical range in places.']
+};
+function rMap(statusOf2) {
+  const dots = Object.entries(HOT).map(([id, [x, y, name]]) => { const st = statusOf2(id), c = st ? RCOL[st] : '#b8c4c1';
+    return `<circle cx="${x}" cy="${y}" r="11" fill="${c}" stroke="#fff" stroke-width="3"/><text x="${x + (id === 'heel' ? -18 : 18)}" y="${y + 4}" text-anchor="${id === 'heel' ? 'end' : 'start'}" font-size="13" font-weight="600" fill="#243">${name.toUpperCase()}</text>`; }).join('');
+  return `<svg viewBox="0 0 330 640" class="r-map"><g stroke="#7a9a92" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M190 40C196 120 186 190 186 232C186 320 178 400 176 470"/><path d="M140 40C134 120 134 190 132 232C130 320 128 400 128 470"/>
+  <path d="M176 470C180 495 188 515 196 522C230 528 262 536 270 548C274 560 262 566 240 566H132C116 566 112 548 120 528C124 510 126 490 128 470"/></g><path d="M60 566H300" stroke="#9bb" stroke-dasharray="4 6"/>${dots}</svg>`;
+}
+
+async function renderReport() {
+  const el = $('#report'), token = renderReport.tok = (renderReport.tok || 0) + 1, say = t => { if (renderReport.tok === token) el.innerHTML = `<div class="r-wait">${t}</div>`; };
+  say('Preparing your report…');
+  const nm = $('#pname').value || 'Patient', date = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  const ms = St.metrics, bad = ms.filter(m => m.status !== 'ok'), regions = RORDER.filter(r => regionMetrics(r).length);
+  /* pictures first (they take a moment) */
+  const shots = {}; let total = 0, done = 0; regions.forEach(r => { if (r !== 'arch') total += regionShots(r).length; else total += St.photos.filter(p => p.res).length; });
+  for (const r of regions) { shots[r] = [];
+    if (r === 'arch') { for (const p of St.photos.filter(p => p.res)) { try { shots[r].push({ src: photoShot(p), cap: (p.side === 'L' ? 'Left' : 'Right') + ' foot, inner side, with the measuring points' }); } catch (e) {} say(`Preparing pictures ${++done} of ${total}…`); } continue; }
+    for (const s of regionShots(r)) { let src = null; try { src = await frameShot(s.ci, s.view, s.f, r, s.side); } catch (e) { console.warn(e); }
+      if (renderReport.tok !== token) return; if (src) shots[r].push({ src, cap: `${s.cap} · ${s.t.toFixed(1)} s` }); say(`Preparing pictures ${++done} of ${total}…`); } }
+  if (renderReport.tok !== token) return;
+  const rank = { ok: 0, watch: 1, flag: 2 }, regSt = r => { const x = regionMetrics(r); return x.length ? worst(x) : null; };
+  const nOk = ms.filter(m => m.status === 'ok').length, nW = ms.filter(m => m.status === 'watch').length, nF = ms.filter(m => m.status === 'flag').length;
+  const top = bad.slice().sort((a, b) => rank[b.status] - rank[a.status]).slice(0, 5);
+  const vtxt = m => m.pair ? `L ${f1(m.L.v, rDec(m))} · R ${f1(m.R.v, rDec(m))}` : f1(m.S.v, rDec(m));
+  const pats = gaitPatterns(ms), pHit = pats.filter(p => p.verdict === 'consistent' || p.verdict === 'some');
+  let h = `<section class="r-cover"><div class="r-band"><span>FOOTSCOPE</span><span>Movement and foot analysis</span></div>
+    <h1>${rEsc(nm)}</h1><div class="r-date">${date}</div>
+    <div class="r-glance"><div class="r-mapbox">${rMap(regSt)}<div class="r-leg"><i style="background:${RCOL.ok}"></i>Typical <i style="background:${RCOL.watch}"></i>Watch <i style="background:${RCOL.flag}"></i>Attention <i style="background:#b8c4c1"></i>Not measured</div></div>
+    <div class="r-side"><div class="r-big"><div style="--c:${RCOL.ok}"><b>${nOk}</b>inside the typical range</div><div style="--c:${RCOL.watch}"><b>${nW}</b>worth a look</div><div style="--c:${RCOL.flag}"><b>${nF}</b>need attention</div></div>
+    <h2>What stands out</h2>` +
+    (top.length ? '<ul class="r-top">' + top.map(m => `<li style="--c:${RCOL[m.status]}"><b>${REG[m.region].name}: ${rEsc(m.label.replace(/\s*\(.*?\)\s*$/, ''))}</b><span>${vtxt(m)} ${rEsc(m.unit.split(' (')[0])}. ${rEsc(m.why.join('; '))}.</span></li>`).join('') + '</ul>' : '<p class="r-ok">Everything measured is inside the typical range.</p>') +
+    (pHit.length ? `<h2>Walking pattern hints</h2><div class="r-chips">${pHit.map(p => `<span style="--c:${p.verdict === 'consistent' ? RCOL.flag : RCOL.watch}">${p.name}</span>`).join('')}</div>` : '') +
+    `</div></div>
+    <div class="r-tiles">${RORDER.map(r => { const x = regionMetrics(r), st = regSt(r), nb = x.filter(m => m.status !== 'ok').length;
+      return `<div style="--c:${st ? RCOL[st] : '#b8c4c1'}"><b>${REG[r].name}</b><span>${st ? `${x.length} measures, ${nb ? nb + ' to review' : 'all typical'}` : 'Not measured yet'}</span></div>`; }).join('')}</div>`;
+  const good = ms.filter(m => m.status === 'ok' && m.ref && !m.photo).slice(0, 5);
+  const pairs = ms.filter(m => m.pair && Math.max(Math.abs(m.L.v), Math.abs(m.R.v)) > 0 && m.unit !== 'mm').map(m => ({ m, d: Math.abs(m.L.v - m.R.v) / ((Math.abs(m.L.v) + Math.abs(m.R.v)) / 2 || 1) * 100 })).sort((a, b) => b.d - a.d).slice(0, 5);
+  const pw = (a, b) => { const mx = Math.max(Math.abs(a), Math.abs(b), 1e-9); return [Math.abs(a) / mx * 100, Math.abs(b) / mx * 100]; };
+  h += `<div class="r-two"><div><h2>Going well</h2>${good.length ? '<ul class="r-good">' + good.map(m => `<li><b>${rEsc(m.label.replace(/\s*\(.*?\)\s*$/, ''))}</b><span>${vtxt(m)} ${rEsc(m.unit.split(' (')[0])}</span></li>`).join('') + '</ul>' : '<p class="r-ok">Nothing measured yet.</p>'}</div>
+    <div><h2>Left and right side by side</h2>${pairs.map(({ m, d }) => { const [a, b] = pw(m.L.v, m.R.v); return `<div class="r-lr"><div>${rEsc(m.label.replace(/\s*\(.*?\)\s*$/, ''))}<i>${d < 10 ? 'similar' : f1(Math.abs(m.L.v - m.R.v), rDec(m)) + ' ' + rEsc(m.unit.split(' (')[0]) + ' apart'}</i></div><div class="r-l"><u style="width:${a}%"></u></div><div class="r-r"><u style="width:${b}%"></u></div></div>`; }).join('') || '<p class="r-ok">No left and right pairs yet.</p>'}</div></div>`;
+  h += `</section>`;
+  for (const r of regions) {
+    const x = regionMetrics(r), st = worst(x), nb = x.filter(m => m.status !== 'ok'), defs = r === 'arch' ? [] : chartDefs(r);
+    h += `<section class="r-reg" style="--c:${RCOL[st]}"><div class="r-rh"><div><h2>${REG[r].name}</h2><p>${REG[r].sub}</p></div><span>${RSAY[st]}</span></div>
+      <div class="r-cols"><div class="r-left">${x.map(rMetric).join('')}<div class="r-say">${nb.length ? SAYS[r][1] : SAYS[r][0]}</div></div>
+      <div class="r-right">${shots[r].length ? `<div class="r-shots${shots[r].length === 1 ? ' one' : ''}">${shots[r].map(s => `<figure><img src="${s.src}" alt=""><figcaption>${rEsc(s.cap)}</figcaption></figure>`).join('')}</div>` : ''}
+      ${defs.map(d => `<div class="r-chart"><div>${rEsc(d.t)}</div>${chartSvg(d, { print: true }).svg}</div>`).join('')}</div></div></section>`;
+  }
+  const miss = []; if (St.clipOf.back == null) miss.push('rearfoot alignment (needs a view from behind)'); if (!St.photos.some(p => p.res)) miss.push('arch and foot posture (needs a side photo of each foot)');
+  h += `<section class="r-pat"><h2>Walking patterns checked</h2><table><tr><th>Pattern</th><th>Result</th><th>Signs found</th></tr>` + pats.map(p => `<tr><td>${p.name}</td><td class="r-pv" style="--c:${p.verdict === 'consistent' ? RCOL.flag : p.verdict === 'some' ? RCOL.watch : '#667'}">${PV[p.verdict][0]}</td><td>${p.signs.filter(s => s.state).map(s => rEsc(s.label.toLowerCase()) + ' (' + rEsc(s.value) + ')').join('; ') || '-'}</td></tr>`).join('') +
+    `</table><div class="fine">Pattern hints are screening rules of thumb, not validated cut-offs and not a diagnosis.</div></section>`;
+  h += `<section class="r-all"><h2>All measurements</h2>${miss.length ? `<div class="fine" style="margin:0 0 6px">Not measured yet: ${miss.join('; ')}.</div>` : ''}<table><tr><th>Region</th><th>Measure</th><th>Value</th><th>Unit</th><th>Typical</th><th>Reading</th></tr>` +
+    ms.map(m => `<tr><td>${REG[m.region].name}</td><td>${rEsc(m.label)}</td><td>${vtxt(m)}</td><td>${rEsc(m.unit)}</td><td>${m.ref ? m.ref[0] + ' to ' + m.ref[1] : ''}</td><td class="st ${m.status === 'ok' ? '' : 'f'}">${STX[m.status]}${m.why.length ? ': ' + rEsc(m.why.join('; ')) : ''}</td></tr>`).join('') + `</table>
+    <div class="fine">Typical ranges are standard adult walking values from gait textbooks (for example Perry and Burnfield, Gait Analysis: Normal and Pathological Function). Values come from a single 2-D camera with automatic landmark detection and can differ from a laboratory measurement by several degrees; ankle and foot figures are the roughest, and photo measures are estimates. This screening report is not a diagnosis.</div></section>`;
+  el.innerHTML = h;
+}
 
 </script></body></html>

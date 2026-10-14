@@ -85,3 +85,14 @@ Every screen shares one layout: a ruler-style progress rail, large touch targets
 
 - Screening aid only, not a diagnosis. 2-D pose estimation from a single phone camera has limits.
 - Place the phone at hip height, steady, with the whole body in view and good lighting.
+
+## Studio (`studio.html`)
+
+A single-page analysis view for walking video. Click a region of the foot and leg model (hip, knee, ankle, rearfoot, arch, forefoot) to see its measurements, the matching curves and the video frame where each value was measured, all without changing tabs.
+
+- Loads a sample clip (side and front views in one frame) so it works straight away.
+- **Upload video** or **Record video** runs pose detection in the browser (MediaPipe Pose Landmarker) and recomputes everything. Pick whether the clip is side, front, back, or side and front together.
+- Measures knee, hip and ankle motion, stance and swing timing, cadence, step length and width, pelvic drop, trunk lean and sway, frontal knee alignment, and a rough rearfoot angle from a back view.
+- Typical ranges are standard adult walking values from gait textbooks. Numbers come from one 2-D camera and are for screening, not diagnosis.
+- **Report** opens a printable one-page summary.
+- Arch and foot posture still come from the close-up photo tool in `index.html`.

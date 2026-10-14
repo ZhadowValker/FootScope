@@ -153,7 +153,7 @@ dialog::backdrop{background:#000a}
         <label class="dim" style="font-size:13px"><input type="checkbox" id="cSkel" checked> Skeleton</label>
         <label class="dim" style="font-size:13px"><input type="checkbox" id="cAng" checked> Angles</label>
         <span class="sp" style="flex:1"></span>
-        <label class="dim" style="font-size:13px">Clip <select id="clipSel"></select></label>
+        <label class="dim" style="font-size:13px">Clip <select id="clipSel"></select></label><button class="btn sm" id="clipDel" title="Remove the clip on screen from the analysis">Remove</button>
       </div>
       <div id="charts"></div>
     </div>
@@ -165,7 +165,7 @@ dialog::backdrop{background:#000a}
 
 <dialog id="cap"><div class="dlg">
   <h3 id="capT">Add a video</h3>
-  <p class="dim" id="capS" style="margin:0 0 6px">Pick which view this clip shows. It is analysed on this device and never uploaded.</p>
+  <p class="dim" id="capS" style="margin:0 0 6px">Pick which view this clip shows. It is analysed on this device and never uploaded. Every extra clip of the same view is added to the average.</p>
   <div class="row"><label class="dim">View
     <select id="capView"><option value="both">Side and front in one clip (left | right)</option><option value="side">Side view</option><option value="front">Front view</option><option value="back">Back view</option></select></label></div>
   <div class="row"><button class="btn p" id="capUp">Upload video</button><button class="btn" id="capRec">Record now</button><button class="btn" id="capX">Close</button></div>
@@ -286,7 +286,26 @@ function analyzeFront(view, fps, ev, back) {
   const rear = (n, t) => { const j = J[n], k = pt(P, j.knee, t), a = pt(P, j.ank, t), h = pt(P, j.heel, t);
     const s = [a[0] - k[0], a[1] - k[1]], v = [h[0] - a[0], h[1] - a[1]];
     return Math.atan2((s[0] * v[1] - s[1] * v[0]) * lat[n], s[0] * v[0] + s[1] * v[1]) * DEG; };
-  return { T, P, ref, hw, pel, sway, frontal, rear, lat };
+  const own = ownSteps(P, back, fps, hw);
+  return { T, P, ref, hw, pel, sway, frontal, rear, lat, ...own };
+}
+
+/* Steps from a front or back clip alone: the leading foot is nearest (front) or farthest (back) from the camera, so the two ankles
+   are furthest apart in height at each heel strike. Heights are divided by leg length, so walking towards or away from the camera
+   (changing size) does not matter. */
+function ownSteps(P, back, fps, hw) {
+  const T = P.T, ll = Array.from({ length: T }, (_, t) => (Math.hypot(P[23].x[t] - P[27].x[t], P[23].y[t] - P[27].y[t]) + Math.hypot(P[24].x[t] - P[28].x[t], P[24].y[t] - P[28].y[t])) / 2);
+  const dy = Array.from({ length: T }, (_, t) => (P[27].y[t] - P[28].y[t]) / ll[t] * (back ? -1 : 1));   // + : left foot leads
+  const ad = dy.map(Math.abs), mx = Math.max(...ad);
+  const pk = mx > .08 ? findPeaks(ad, Math.max(4, Math.round(.3 * fps)), mx * .3) : [];
+  const ev = pk.map(f => [f, dy[f] > 0 ? 'L' : 'R']);
+  const hs = { L: ev.filter(e => e[1] === 'L').map(e => e[0]), R: ev.filter(e => e[1] === 'R').map(e => e[0]) };
+  /* mid-stance of a leg = the moment the other foot swings past it, i.e. the ankles are level again after that leg led */
+  const mids = { L: [], R: [] };
+  for (const [f, n] of ev) { let t = f + 1; const sg = Math.sign(dy[f]); while (t < T && Math.sign(dy[t]) === sg) t++; if (t < T && t - f < Math.round(.8 * fps)) mids[n].push(t); }
+  const win = ev.length ? [Math.max(0, ev[0][0] - 6), Math.min(T - 1, ev[ev.length - 1][0] + 6)] : [0, T - 1];
+  for (const n of 'LR') mids[n] = mids[n].filter(t => t <= win[1]);
+  return { ev, hs, mids, win, stepT: ev.slice(1).map((e, i) => (e[0] - ev[i][0]) / fps) };
 }
 
 function stanceMids(side, n) { return side.leg[n].cyc.map(c => c.mid); }
@@ -303,48 +322,48 @@ const REG = {
 };
 
 function buildMetrics(S) {
-  const out = [], side = S.side, fr = S.front, bk = S.back;
-  const agg = (n, key, idx = 0) => { const c = side.leg[n].cyc; if (!c.length) return null; const v = c.map(x => Array.isArray(x[key]) ? x[key][idx] : x[key]);
-    const fi = Array.isArray(c[0][key]) ? c[0][key][1] : c[0].a; return { v: mean(v), sd: sd(v), n: v.length, frame: fi }; };
-  const pair = (region, id, label, unit, key, ref, conf, note, fn) => {
-    if (!side) return; const L = fn ? fn('L') : agg('L', key), R = fn ? fn('R') : agg('R', key); if (!L || !R) return;
-    out.push({ region, id, label, unit, pair: true, L, R, ref, conf, note }); };
-  const single = (region, id, label, unit, v, ref, conf, note, frame) => out.push({ region, id, label, unit, pair: false, S: { v, frame: frame || 0, n: 1 }, ref, conf, note });
-  if (side) {
-    pair('hip', 'hipx', 'Hip extension, late stance', '°', 'hip_ext', [10, 20], 'med', 'Thigh angle behind vertical');
-    pair('hip', 'hipf', 'Hip flexion, peak', '°', 'hip_flex', [25, 40], 'med', 'Thigh angle ahead of vertical');
-    const tr = side.trunk.slice(side.win[0], side.win[1] + 1); single('hip', 'trunk', 'Trunk lean, forward', '°', mean(tr), null, 'med', 'Shoulder line against vertical, side view', side.win[0]);
-    pair('knee', 'kfs', 'Knee flexion, swing peak', '°', 'kf_swing', [55, 70], 'high', 'Highest bend while the leg swings through');
-    pair('knee', 'kfl', 'Knee flexion, loading response', '°', 'kf_load', [10, 25], 'med', 'Bend just after heel strike');
-    pair('knee', 'kfm', 'Knee flexion, mid-stance minimum', '°', 'kf_stmin', [0, 10], 'med', 'How straight the knee gets in stance');
-    pair('ankle', 'pf', 'Plantarflexion at toe-off', '°', 'pf', [10, 25], 'low', 'Measured against the standing pose');
-    pair('ankle', 'df', 'Dorsiflexion in stance', '°', 'df', [5, 15], 'low', 'Measured against the standing pose');
-    pair('fore', 'stance', 'Stance phase', '% of stride', 'stance', [57, 63], 'high', 'Time the foot is on the ground');
-    const sl = side.stepL.filter(x => x[2] < side.win[1] - 8);
-    if (sl.length > 1) { const L = sl.filter(x => x[1] === 'L').map(x => x[0]), R = sl.filter(x => x[1] === 'R').map(x => x[0]);
-      if (L.length && R.length) out.push({ region: 'fore', id: 'stepl', label: 'Step length, ÷ leg length', unit: '×', pair: true, L: { v: mean(L), n: L.length, frame: sl.find(x => x[1] === 'L')[2] }, R: { v: mean(R), n: R.length, frame: sl.find(x => x[1] === 'R')[2] }, ref: null, conf: 'med', note: 'Ankle gap at heel strike' }); }
-    if (side.stepT.length) {
-      const cad = 60 / mean(side.stepT); single('gait', 'cad', 'Cadence', 'steps/min', cad, [100, 120], 'high', 'From heel strike to heel strike', side.ev[0][0]);
-      const st = [...side.leg.L.cyc, ...side.leg.R.cyc].map(c => c.T); if (st.length) single('gait', 'stride', 'Stride time', 's', mean(st), [0.9, 1.3], 'high', 'One full cycle of one leg', side.ev[0][0]);
-    }
+  /* S = { sides:[{res,clip}], fronts:[...], backs:[...] }  — every clip of a view is pooled, so extra walks make the numbers steadier */
+  const out = [], sides = S.sides || [], fronts = S.fronts || [], backs = S.backs || [];
+  const pool = (items) => { // items: [{v,frame,clip}] -> one value with spread and count
+    items = items.filter(x => x && isFinite(x.v)); if (!items.length) return null; const v = items.map(x => x.v);
+    return { v: mean(v), sd: v.length > 1 ? sd(v) : 0, n: items.reduce((s, x) => s + (x.n || 1), 0), frame: items[0].frame, clip: items[0].clip }; };
+  const cyc = (n, key, idx = 0) => { const it = [];
+    sides.forEach(a => a.res.leg[n].cyc.forEach(c => it.push({ v: Array.isArray(c[key]) ? c[key][idx] : c[key], frame: Array.isArray(c[key]) ? c[key][1] : c.a, clip: a.clip, n: 1 })));
+    return pool(it); };
+  const pair = (region, id, label, unit, ref, conf, note, fn) => { const L = fn('L'), R = fn('R'); if (!L || !R) return; out.push({ region, id, label, unit, pair: true, L, R, ref, conf, note }); };
+  const single = (region, id, label, unit, x, ref, conf, note) => { if (x) out.push({ region, id, label, unit, pair: false, S: x, ref, conf, note }); };
+  const one = (list, f) => pool(list.map(a => { const r = f(a); return r == null || !isFinite(r.v) ? null : { v: r.v, frame: r.frame, clip: a.clip, n: r.n || 1 }; }));
+  if (sides.length) {
+    pair('hip', 'hipx', 'Hip extension, late stance', '°', [10, 20], 'med', 'Thigh angle behind vertical', n => cyc(n, 'hip_ext'));
+    pair('hip', 'hipf', 'Hip flexion, peak', '°', [25, 40], 'med', 'Thigh angle ahead of vertical', n => cyc(n, 'hip_flex'));
+    single('hip', 'trunk', 'Trunk lean, forward', '°', one(sides, a => ({ v: mean(a.res.trunk.slice(a.res.win[0], a.res.win[1] + 1)), frame: a.res.win[0] })), null, 'med', 'Shoulder line against vertical, side view');
+    pair('knee', 'kfs', 'Knee flexion, swing peak', '°', [55, 70], 'high', 'Highest bend while the leg swings through', n => cyc(n, 'kf_swing'));
+    pair('knee', 'kfl', 'Knee flexion, loading response', '°', [10, 25], 'med', 'Bend just after heel strike', n => cyc(n, 'kf_load'));
+    pair('knee', 'kfm', 'Knee flexion, mid-stance minimum', '°', [0, 10], 'med', 'How straight the knee gets in stance', n => cyc(n, 'kf_stmin'));
+    pair('ankle', 'pf', 'Plantarflexion at toe-off', '°', [10, 25], 'low', 'Measured against the standing pose', n => cyc(n, 'pf'));
+    pair('ankle', 'df', 'Dorsiflexion in stance', '°', [5, 15], 'low', 'Measured against the standing pose', n => cyc(n, 'df'));
+    pair('fore', 'stance', 'Stance phase', '% of stride', [57, 63], 'high', 'Time the foot is on the ground', n => cyc(n, 'stance'));
+    pair('fore', 'stepl', 'Step length, ÷ leg length', '×', null, 'med', 'Ankle gap at heel strike', n => pool(sides.flatMap(a => a.res.stepL.filter(x => x[1] === n && x[2] < a.res.win[1] - 8).map(x => ({ v: x[0], frame: x[2], clip: a.clip, n: 1 })))));
+    single('gait', 'cad', 'Cadence', 'steps/min', one(sides, a => a.res.stepT.length ? { v: 60 / mean(a.res.stepT), frame: a.res.ev[0][0], n: a.res.stepT.length } : null), [100, 120], 'high', 'From heel strike to heel strike');
+    single('gait', 'stride', 'Stride time', 's', pool(sides.flatMap(a => ['L', 'R'].flatMap(n => a.res.leg[n].cyc.map(c => ({ v: c.T, frame: c.a, clip: a.clip, n: 1 }))))), [0.9, 1.3], 'high', 'One full cycle of one leg');
   }
-  if (fr) {
-    const w = side && S.sync ? side.win : [0, fr.T - 1], seg = a => a.slice(w[0], w[1] + 1);
-    const pel = seg(fr.pel); single('hip', 'pelv', 'Pelvic drop, each side', '°', (Math.max(...pel) - Math.min(...pel)) / 2, [0, 5], 'med', 'Half the pelvis tilt range', w[0]);
-    const sw = seg(fr.sway); single('hip', 'sway', 'Trunk sway, ÷ hip width', '×', Math.max(...sw) - Math.min(...sw), null, 'low', 'Shoulders against hips, side to side', w[0]);
-    if (side && S.sync) {
-      const ag = n => { const c = side.leg[n].cyc; if (!c.length) return null; const v = c.map(x => fr.frontal(n, x.mid)); return { v: mean(v), sd: sd(v), n: v.length, frame: c[0].mid }; };
-      pair('knee', 'kfr', 'Frontal alignment, mid-stance', '° (+ out, − in)', null, [-4, 4], 'low', 'Knee against hip-to-ankle line, front view', ag);
-      const sws = side.ev.map(([h]) => Math.abs(fr.P[27].x[h] - fr.P[28].x[h]) / fr.hw[h]).filter(v => v > .3);
-      if (sws.length) single('fore', 'stepw', 'Step width, ÷ hip width', '×', median(sws), null, 'low', 'Gap between the ankles at heel strike', side.ev[0][0]);
-    }
+  if (fronts.length) {
+    single('hip', 'pelv', 'Pelvic drop, each side', '°', one(fronts, a => { const w = a.res.win, p = a.res.pel.slice(w[0], w[1] + 1); return { v: (Math.max(...p) - Math.min(...p)) / 2, frame: w[0] }; }), [0, 5], 'med', 'Half the pelvis tilt range');
+    single('hip', 'sway', 'Trunk sway, ÷ hip width', '×', one(fronts, a => { const w = a.res.win, p = a.res.sway.slice(w[0], w[1] + 1); return { v: Math.max(...p) - Math.min(...p), frame: w[0] }; }), null, 'low', 'Shoulders against hips, side to side');
+    /* mid-stance frames: from the side view of the same clip when there is one, otherwise from the front clip's own steps */
+    const mids = (a, n) => { const sd_ = sides.find(x => x.clip === a.clip); return sd_ ? sd_.res.leg[n].cyc.map(c => c.mid) : a.res.mids[n]; };
+    pair('knee', 'kfr', 'Frontal alignment, mid-stance', '° (+ out, − in)', [-4, 4], 'low', 'Knee against hip-to-ankle line, front view', n => pool(fronts.flatMap(a => mids(a, n).map(m => ({ v: a.res.frontal(n, m), frame: m, clip: a.clip, n: 1 })))));
+    const swv = fronts.flatMap(a => { const sd_ = sides.find(x => x.clip === a.clip), evs = sd_ ? sd_.res.ev : a.res.ev;
+      return evs.map(([h]) => ({ v: Math.abs(a.res.P[27].x[h] - a.res.P[28].x[h]) / a.res.hw[h], frame: h, clip: a.clip, n: 1 })).filter(x => x.v > .3); });
+    const swp = pool(swv); if (swp) swp.v = median(swv.map(x => x.v));
+    single('fore', 'stepw', 'Step width, ÷ hip width', '×', swp, null, 'low', 'Gap between the ankles at heel strike');
   }
-  if (bk) {
-    const w = side ? side.win : [0, bk.T - 1];
-    const f = n => { const v = []; for (let t = bk.ref[0]; t < bk.ref[1]; t++) v.push(bk.rear(n, t)); return { v: mean(v), sd: sd(v), n: v.length, frame: bk.ref[0] }; };
-    pair('heel', 'rear', 'Rearfoot angle, standing (+ valgus)', '°', null, [-2, 6], 'low', 'Shank axis against heel axis, back view', f);
+  if (backs.length) {
+    const sta = n => one(backs, a => { const v = []; for (let t = a.res.ref[0]; t < a.res.ref[1]; t++) v.push(a.res.rear(n, t)); return { v: mean(v), frame: a.res.ref[0] }; });
+    pair('heel', 'rear', 'Rearfoot angle, standing (+ valgus)', '°', [-2, 6], 'low', 'Shank axis against heel axis, back view', sta);
+    pair('heel', 'rearm', 'Rearfoot angle, mid-stance (+ valgus)', '°', [-2, 8], 'low', 'Same angle while walking, from the back view', n => pool(backs.flatMap(a => a.res.mids[n].map(m => { const v = []; for (let t = Math.max(0, m - 2); t <= Math.min(a.res.T - 1, m + 2); t++) v.push(a.res.rear(n, t)); return { v: mean(v), frame: m, clip: a.clip, n: 1 }; }))));
   }
-  const VIEW = { pelv: 'front', sway: 'front', kfr: 'front', stepw: 'front', rear: 'back' };
+  const VIEW = { pelv: 'front', sway: 'front', kfr: 'front', stepw: 'front', rear: 'back', rearm: 'back' };
   for (const m of out) { m.view = VIEW[m.id] || 'side'; m.status = statusOf(m); }
   return out;
 }
@@ -366,7 +385,7 @@ function statusOf(m) {
   m.why = why; return s;
 }
 const worst = (ms) => ms.reduce((s, m) => ({ ok: 0, watch: 1, flag: 2 }[m.status] > { ok: 0, watch: 1, flag: 2 }[s] ? m.status : s), 'ok');
-if (typeof module !== 'undefined') module.exports = { analyzeSide, analyzeFront, buildMetrics, findPeaks, sg7, stillWindow, prep };
+if (typeof module !== 'undefined') module.exports = { analyzeSide, analyzeFront, ownSteps, buildMetrics, findPeaks, sg7, stillWindow, prep };
 
 /* ---------- app ---------- */
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -377,7 +396,7 @@ const RECOMMEND = { hip: 'front', knee: 'side', ankle: 'side', heel: 'back', arc
 const toast = (t, ms = 3500) => { const e = $('#toast'); e.textContent = t; e.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => e.hidden = true, ms); };
 const f1 = (v, d = 1) => (Math.abs(v) < 10 ** -d / 2 ? 0 : v).toFixed(d);
 
-const St = { clips: [], active: 0, region: 'knee', S: {}, clipOf: {}, metrics: [], pose: null };
+const St = { clips: [], active: 0, region: 'knee', an: [], clipOf: {}, n: {}, metrics: [], pose: null };
 
 /* ----- clips ----- */
 function makeClip(name, url, layout, views, vw, vh, extra = {}) {
@@ -386,19 +405,23 @@ function makeClip(name, url, layout, views, vw, vh, extra = {}) {
   return c;
 }
 function compute() {
-  const S = {}, clipOf = {};
-  St.clips.forEach((c, i) => { for (const k in c.views) { const t = c.tracks[k]; if (!t) continue; clipOf[k] = i; } });
-  if (clipOf.side != null) { const c = St.clips[clipOf.side]; S.side = analyzeSide(c.views.side, FPS); }
-  if (clipOf.front != null) { const c = St.clips[clipOf.front]; S.front = analyzeFront(c.views.front, FPS, S.side && S.side.ev, false); }
-  if (clipOf.back != null) { const c = St.clips[clipOf.back]; S.back = analyzeFront(c.views.back, FPS, null, true); }
-  S.sync = clipOf.side != null && clipOf.side === clipOf.front;
-  St.S = S; St.clipOf = clipOf; St.metrics = (S.side || S.front || S.back) ? buildMetrics(S) : [];
+  const an = [], clipOf = {}, sides = [], fronts = [], backs = [];
+  St.clips.forEach((c, i) => { an[i] = {};
+    for (const k in c.views) { if (!c.tracks[k]) continue; clipOf[k] = i;
+      if (k === 'side') { an[i].side = analyzeSide(c.views.side, FPS); sides.push({ res: an[i].side, clip: i }); }
+      if (k === 'front') { an[i].front = analyzeFront(c.views.front, FPS, null, false); fronts.push({ res: an[i].front, clip: i }); }
+      if (k === 'back') { an[i].back = analyzeFront(c.views.back, FPS, null, true); backs.push({ res: an[i].back, clip: i }); } } });
+  St.an = an; St.clipOf = clipOf; St.n = { side: sides.length, front: fronts.length, back: backs.length };
+  St.metrics = (sides.length || fronts.length || backs.length) ? buildMetrics({ sides, fronts, backs }) : [];
 }
+/* the analysis a drawing should use: the one for the clip on screen, else the newest clip that has that view */
+const AN = view => (St.an && St.an[St.active] && St.an[St.active][view]) || (St.clipOf[view] != null ? St.an[St.clipOf[view]][view] : null);
+const hasView = view => St.clipOf[view] != null;
 
 /* ----- header / model ----- */
 function renderHeader() {
   const has = k => St.clipOf[k] != null;
-  $('#vstat').innerHTML = ['side', 'front', 'back'].map(k => `<span class="pill ${has(k) ? 'on' : ''}">${k} ${has(k) ? '✓' : '○'}</span>`).join(' ');
+  $('#vstat').innerHTML = ['side', 'front', 'back'].map(k => `<span class="pill ${has(k) ? 'on' : ''}">${k} ${has(k) ? '✓' + (St.n[k] > 1 ? ' ×' + St.n[k] : '') : '○'}</span>`).join(' ');
   $('#hdate').textContent = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
 }
 function regionMetrics(r) { return St.metrics.filter(m => m.region === r); }
@@ -458,7 +481,7 @@ function renderPanel() {
   } else {
     const bad = ms.filter(m => m.status !== 'ok');
     h += bad.length ? `<div class="find">${bad.map(m => `<div><b>${m.label}.</b> ${m.why.join('; ')}.</div>`).join('')}</div>` : `<div class="find ok">Everything measured in this region is inside the typical range.</div>`;
-    for (const [view, msg] of MISSING[r] || []) if (St.clipOf[view] == null || (!St.S.sync && view === 'front')) h += `<div class="note" style="margin-top:10px">${msg}</div>`;
+    for (const [view, msg] of MISSING[r] || []) if (!hasView(view)) h += `<div class="note" style="margin-top:10px">${msg}</div>`;
   }
   const rec = RECOMMEND[r];
   h += `<div class="act"><button class="btn p" data-cap="rec">Record video</button><button class="btn" data-cap="up">Upload video</button>` +
@@ -474,7 +497,7 @@ function setRegion(r) { St.region = r; renderModel(); renderPanel(); renderChart
 
 /* ----- charts ----- */
 function chartDefs(r) {
-  const S = St.S, out = [];
+  const S = { side: AN('side'), front: AN('front') }, out = [];
   if (r === 'hip' && S.side) out.push({ t: 'Thigh angle, ahead of vertical (°)', view: 'side', series: [['L', S.side.leg.L.thigh], ['R', S.side.leg.R.thigh]], ev: true });
   if (r === 'hip' && S.front) out.push({ t: 'Pelvis tilt, front view (°)', view: 'front', series: [['', S.front.pel]], ev: false });
   if (r === 'knee' && S.side) out.push({ t: 'Knee flexion (°)', view: 'side', series: [['L', S.side.leg.L.kf], ['R', S.side.leg.R.kf]], ev: true, band: [[55, 70, 'swing typical']] });
@@ -492,9 +515,9 @@ function chartSvg(d, o = {}) {
   for (let sec = 0; sec <= (T - 1) / FPS; sec++) s += `<text x="${X(sec * FPS)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="${tc}" font-family="JetBrains Mono,monospace">${sec}s</text>`;
   (d.band || []).forEach(([a, b]) => { if (b > lo && a < hi) s += `<rect x="${pl}" width="${W - pl - pr}" y="${Y(Math.min(b, hi))}" height="${Math.max(0, Y(Math.max(a, lo)) - Y(Math.min(b, hi)))}" fill="${o.print ? '#0a8f72' : '#7fe3c4'}" opacity=".08"/>`; });
   d.series.forEach(([n, a]) => { const col = n === 'R' ? cR : cL; s += `<polyline fill="none" stroke="${col}" stroke-width="2" points="${a.map((v, i) => X(i).toFixed(1) + ',' + Y(v).toFixed(1)).join(' ')}"/>`; });
-  if (d.ev && St.S.side) { for (const n of 'LR') { const col = n === 'R' ? cR : cL;
-      St.S.side.leg[n].hs.forEach(h => s += `<path d="M${X(h) - 4},${H - pb} L${X(h) + 4},${H - pb} L${X(h)},${H - pb - 8}Z" fill="${col}"/>`);
-      St.S.side.leg[n].to.forEach(h => s += `<line x1="${X(h)}" x2="${X(h)}" y1="${H - pb}" y2="${H - pb - 9}" stroke="${col}" stroke-width="2" stroke-dasharray="2 2"/>`); } }
+  if (d.ev && AN('side')) { const SS = AN('side'); for (const n of 'LR') { const col = n === 'R' ? cR : cL;
+      SS.leg[n].hs.forEach(h => s += `<path d="M${X(h) - 4},${H - pb} L${X(h) + 4},${H - pb} L${X(h)},${H - pb - 8}Z" fill="${col}"/>`);
+      SS.leg[n].to.forEach(h => s += `<line x1="${X(h)}" x2="${X(h)}" y1="${H - pb}" y2="${H - pb - 9}" stroke="${col}" stroke-width="2" stroke-dasharray="2 2"/>`); } }
   if (!o.print) s += `<line class="ph" data-view="${d.view}" x1="-10" x2="-10" y1="${pt}" y2="${H - pb}" stroke="#fff" stroke-width="1.5"/>`;
   s += `<g font-size="11" font-family="Space Grotesk,sans-serif">${d.series.map(([n], i) => n ? `<text x="${pl + 8 + i * 28}" y="${pt + 11}" fill="${n === 'R' ? cR : cL}">${n}</text>` : '').join('')}</g></svg>`;
   return { svg: s, T, pl, pr, W };
@@ -509,7 +532,7 @@ function renderCharts() {
 }
 function updatePlayhead() {
   const clip = St.clips[St.active]; if (!clip) return;
-  $$('#charts .ph').forEach(l => { const T = clip.tracks[l.dataset.view] ? clip.tracks[l.dataset.view].T : 0; const ok = T && St.clipOf[l.dataset.view] === St.active;
+  $$('#charts .ph').forEach(l => { const T = clip.tracks[l.dataset.view] ? clip.tracks[l.dataset.view].T : 0; const ok = T && !!(St.an[St.active] && St.an[St.active][l.dataset.view]);
     const x = ok ? 44 + curFrame() / (T - 1) * (800 - 44 - 10) : -10; l.setAttribute('x1', x); l.setAttribute('x2', x); });
 }
 
@@ -518,7 +541,7 @@ const vid = $('#vid'), ov = $('#ov'), ctx = ov.getContext('2d');
 const curFrame = () => Math.max(0, Math.round(vid.currentTime * FPS));
 function loadClip(i, keep) {
   St.active = i; const c = St.clips[i]; if (!c) return;
-  if (vid.dataset.src !== c.name) { vid.dataset.src = c.name; vid.src = c.url; vid.load(); }
+  if (vid.dataset.src !== c.name + '|' + i) { vid.dataset.src = c.name + '|' + i; vid.src = c.url; vid.load(); }
   ov.width = c.vw; ov.height = c.vh; $('#stage').style.setProperty('--ar', c.vw + '/' + c.vh); $('#mask').style.display = c.mask ? '' : 'none';
   $('#tagL').style.display = c.layout === 'both' ? '' : 'none'; $('#tagR').style.display = c.layout === 'both' ? '' : 'none';
   if (c.layout === 'both') { $('#tagL').textContent = 'SIDE'; $('#tagR').textContent = 'FRONT'; }
@@ -527,13 +550,13 @@ function loadClip(i, keep) {
   renderTicks(); drawOverlay(); updatePlayhead();
 }
 function renderTicks() {
-  const c = St.clips[St.active], S = St.S; let h = '';
-  if (S.side && St.clipOf.side === St.active) for (const n of 'LR') { const col = n === 'R' ? '#ff9d6e' : '#7fe3c4';
+  const c = St.clips[St.active], S = St.an[St.active] || {}; let h = '';
+  if (S.side) for (const n of 'LR') { const col = n === 'R' ? '#ff9d6e' : '#7fe3c4';
     S.side.leg[n].hs.forEach(f => h += `<b style="left:${f / (c.T - 1) * 100}%;background:${col}"></b>`); }
   $('#ticks').innerHTML = h;
 }
 function seekFrame(f, view) { if (view && St.clipOf[view] != null && St.clipOf[view] !== St.active) loadClip(St.clipOf[view]); vid.pause(); vid.currentTime = f / FPS; }
-function seekMetric(id, k) { const m = St.metrics.find(x => x.id === id); if (!m) return; const x = k === 'S' ? m.S : m[k]; seekFrame(x.frame, m.view); toast(`${m.label}: frame ${x.frame}`); }
+function seekMetric(id, k) { const m = St.metrics.find(x => x.id === id); if (!m) return; const x = k === 'S' ? m.S : m[k]; if (x.clip != null && x.clip !== St.active) loadClip(x.clip); seekFrame(x.frame); toast(`${m.label}: frame ${x.frame}`); }
 function layoutRects(c) { const o = {}; if (c.layout === 'both') { o.side = [0, c.vw / 2, c.vh]; o.front = [c.vw / 2, c.vw / 2, c.vh]; } else o[c.layout] = [0, c.vw, c.vh]; return o; }
 const EDG = [[11, 12], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [27, 29], [29, 31], [27, 31], [24, 26], [26, 28], [28, 30], [30, 32], [28, 32]];
 function drawOverlay() {
@@ -548,8 +571,8 @@ function drawOverlay() {
       for (const [a, b] of EDG) { const on = hot.has(a) || hot.has(b); ctx.strokeStyle = on ? (col(a) === col(b) ? col(a) : '#444') : 'rgba(80,110,105,.45)'; ctx.lineWidth = (on ? 4.5 : 2.5) * sc;
         ctx.beginPath(); ctx.moveTo(X(a), Y(a)); ctx.lineTo(X(b), Y(b)); ctx.stroke(); }
       for (let k = 23; k <= 32; k++) { const on = hot.has(k); ctx.fillStyle = on ? col(k) : 'rgba(80,110,105,.7)'; ctx.beginPath(); ctx.arc(X(k), Y(k), (on ? 8 : 4.5) * sc, 0, 7); ctx.fill(); if (on) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * sc; ctx.stroke(); } }
-      if ($('#cAng').checked && view === 'side' && St.S.side && St.clipOf.side === St.active) {
-        const S = St.S.side; ctx.font = `600 ${20 * sc}px JetBrains Mono, monospace`; ctx.textBaseline = 'middle';
+      if ($('#cAng').checked && view === 'side' && St.an[St.active] && St.an[St.active].side) {
+        const S = St.an[St.active].side; ctx.font = `600 ${20 * sc}px JetBrains Mono, monospace`; ctx.textBaseline = 'middle';
         const lab = (k, txt, n) => { const x = X(k) + (n === 'R' ? 14 : -14) * sc, a = n === 'R' ? 'left' : 'right'; ctx.textAlign = a; ctx.lineWidth = 5 * sc; ctx.strokeStyle = '#fff'; ctx.strokeText(txt, x, Y(k)); ctx.fillStyle = n === 'R' ? '#c2410c' : '#00775e'; ctx.fillText(txt, x, Y(k)); };
         for (const n of 'LR') { const j = J[n], r = S.leg[n];
           if (St.region === 'knee') lab(j.knee, f1(r.kf[tt], 0) + '°', n); else if (St.region === 'ankle') lab(j.ank, f1(r.af[tt], 0) + '°', n); else if (St.region === 'hip') lab(j.hip, f1(r.thigh[tt], 0) + '°', n);
@@ -567,7 +590,8 @@ $('#bPlay').onclick = () => { if (vid.paused) { vid.playbackRate = +$('#spd').va
 $('#spd').onchange = () => vid.playbackRate = +$('#spd').value;
 $('#bPrev').onclick = () => { vid.pause(); vid.currentTime = Math.max(0, (curFrame() - 1) / FPS); }; $('#bNext').onclick = () => { vid.pause(); vid.currentTime = (curFrame() + 1) / FPS; };
 $('#scrub').oninput = e => { vid.pause(); vid.currentTime = +e.target.value / FPS; };
-$('#cSkel').onchange = $('#cAng').onchange = drawOverlay; $('#clipSel').onchange = e => { vid.pause(); loadClip(+e.target.value); };
+$('#cSkel').onchange = $('#cAng').onchange = drawOverlay; $('#clipDel').onclick = () => { if (St.clips.length < 2) { toast('Keep at least one clip. Add another first.'); return; } vid.pause(); St.clips.splice(St.active, 1); compute(); loadClip(Math.max(0, St.active - 1), true); renderHeader(); renderModel(); renderPanel(); renderCharts(); toast('Clip removed'); };
+$('#clipSel').onchange = e => { vid.pause(); loadClip(+e.target.value); };
 document.addEventListener('keydown', e => { if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) || $('#cap').open) return;
   if (e.code === 'Space') { e.preventDefault(); $('#bPlay').click(); } else if (e.code === 'ArrowLeft') $('#bPrev').click(); else if (e.code === 'ArrowRight') $('#bNext').click(); });
 document.addEventListener('click', e => { const b = e.target.closest('[data-region]'); if (b) setRegion(b.dataset.region); });
@@ -614,7 +638,8 @@ $('#capUp').onclick = () => $('#capFile').click();
 $('#capFile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await runAnalysis(f, f.name); };
 async function runAnalysis(file, name) {
   const layout = $('#capView').value;
-  try { const clip = await analyzeFile(file, layout, name); St.clips.push(clip); compute(); loadClip(St.clips.length - 1); renderHeader(); renderModel(); renderPanel(); renderCharts(); capMsg(''); $('#cap').close(); toast('Analysis done: ' + name); }
+  try { const clip = await analyzeFile(file, layout, name); if (St.clips.length === 1 && St.clips[0].sample) { St.clips = []; toast('Sample clip replaced by your recording'); }
+    St.clips.push(clip); compute(); loadClip(St.clips.length - 1); renderHeader(); renderModel(); renderPanel(); renderCharts(); capMsg(''); $('#cap').close(); toast('Analysis done: ' + name); }
   catch (err) { console.error(err); capMsg('Could not analyse that clip: ' + (err.message || err)); }
 }
 let stream = null, recorder = null, chunks = [], recTimer = null;
@@ -652,7 +677,7 @@ function renderReport() {
 /* ----- start ----- */
 (function init() {
   const vw = 1280, vh = 720;
-  const sample = makeClip('Sample · walking model', SAMPLE_VIDEO, 'both', { side: { w: 640, h: 720, lm: SAMPLE_LM.side }, front: { w: 640, h: 720, lm: SAMPLE_LM.front } }, vw, vh, { mask: true });
+  const sample = makeClip('Sample · walking model', SAMPLE_VIDEO, 'both', { side: { w: 640, h: 720, lm: SAMPLE_LM.side }, front: { w: 640, h: 720, lm: SAMPLE_LM.front } }, vw, vh, { mask: true, sample: true });
   St.clips.push(sample); compute(); renderHeader(); loadClip(0); renderModel(); renderPanel(); renderCharts();
   try { const n = localStorage.getItem('fs-studio-name'); if (n) $('#pname').value = n; } catch (e) {}
   $('#pname').onchange = () => { try { localStorage.setItem('fs-studio-name', $('#pname').value); } catch (e) {} };

@@ -94,5 +94,7 @@ A single-page analysis view for walking video. Click a region of the foot and le
 - **Upload video** or **Record video** runs pose detection in the browser (MediaPipe Pose Landmarker) and recomputes everything. Pick whether the clip is side, front, back, or side and front together.
 - Measures knee, hip and ankle motion, stance and swing timing, cadence, step length and width, pelvic drop, trunk lean and sway, frontal knee alignment, and a rough rearfoot angle from a back view.
 - Typical ranges are standard adult walking values from gait textbooks. Numbers come from one 2-D camera and are for screening, not diagnosis.
+- **Separate recordings work.** Record or upload each view as its own clip. Every clip finds its own steps, so frontal knee alignment, step width and the rearfoot angle do not need a combined clip. Several walks of the same view are pooled into one average, so extra passes give steadier numbers. The first real clip replaces the sample.
+- Results do not depend on where the person is in the frame or how large they appear, so walking across or towards the camera is fine.
 - **Report** opens a printable one-page summary.
 - Arch and foot posture still come from the close-up photo tool in `index.html`.

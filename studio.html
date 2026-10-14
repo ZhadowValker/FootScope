@@ -718,30 +718,47 @@ const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/pose_landmark
 async function getPose() {
   if (window.__fakePose) return window.__fakePose;
   if (St.pose) return St.pose;
-  const mod = await import(`${MP_URL}/vision_bundle.mjs`), fs = await mod.FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
-  const mk = d => mod.PoseLandmarker.createFromOptions(fs, { baseOptions: { modelAssetPath: MODEL_URL, delegate: d }, runningMode: 'IMAGE', numPoses: 1, minPoseDetectionConfidence: .4, minPosePresenceConfidence: .4 });
-  try { St.pose = await mk('GPU'); } catch (e) { St.pose = await mk('CPU'); } return St.pose;
+  try {
+    const mod = await import(`${MP_URL}/vision_bundle.mjs`), fs = await mod.FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
+    const mk = d => mod.PoseLandmarker.createFromOptions(fs, { baseOptions: { modelAssetPath: MODEL_URL, delegate: d }, runningMode: 'IMAGE', numPoses: 1, minPoseDetectionConfidence: .4, minPosePresenceConfidence: .4 });
+    try { St.pose = await mk('GPU'); } catch (e) { console.warn('GPU delegate failed, using CPU', e); St.pose = await mk('CPU'); }
+  } catch (e) {
+    console.error(e);
+    throw new Error('The pose model could not be downloaded. It needs an internet connection the first time. If you opened this inside a preview or a restricted page, open the studio.html link in a normal browser tab instead.');
+  }
+  return St.pose;
 }
 const once = (el, ev) => new Promise(r => el.addEventListener(ev, r, { once: true }));
 function capMsg(t, p) { $('#capMsg').textContent = t || ''; const pr = $('#prog'); pr.hidden = p == null; if (p != null) pr.firstElementChild.style.width = Math.round(p * 100) + '%'; }
+/* wait for an event, but fail with a readable message instead of hanging forever */
+const waitFor = (el, ev, ms, msg) => new Promise((res, rej) => { const t = setTimeout(() => { cleanup(); rej(new Error(msg)); }, ms), ok = () => { cleanup(); res(); }, bad = () => { cleanup(); rej(new Error('This browser cannot read that video. Try an MP4 (H.264) file; iPhone HEVC .mov files do not open in some browsers.')); };
+  const cleanup = () => { clearTimeout(t); el.removeEventListener(ev, ok); el.removeEventListener('error', bad); }; el.addEventListener(ev, ok); el.addEventListener('error', bad); });
+function seekTo(v, t) {
+  if (Math.abs(v.currentTime - t) < .0005 && v.readyState >= 2) return Promise.resolve();   // already there: no 'seeked' event will come
+  const p = waitFor(v, 'seeked', 8000, 'The video stopped responding while its frames were being read.'); v.currentTime = t; return p;
+}
 async function analyzeFile(file, layout, name) {
-  const url = URL.createObjectURL(file), v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
-  await once(v, 'loadedmetadata');
-  if (!isFinite(v.duration)) { v.currentTime = 1e101; await once(v, 'timeupdate'); v.currentTime = 0; await once(v, 'seeked'); }
+  capMsg('Reading the video…', 0.02);
+  const url = URL.createObjectURL(file), v = document.createElement('video'); v.muted = true; v.setAttribute('playsinline', ''); v.preload = 'auto'; v.src = url;
+  await waitFor(v, 'loadedmetadata', 20000, 'The video did not open. Check the file is a video and try again.');
+  if (!isFinite(v.duration)) { v.currentTime = 1e101; await waitFor(v, 'timeupdate', 8000, 'Could not read the length of that recording.'); v.currentTime = 0; }
+  if (v.readyState < 2) await waitFor(v, 'loadeddata', 20000, 'The video did not load its first frame.');
   const dur = v.duration, vw = v.videoWidth, vh = v.videoHeight, N = Math.min(Math.floor(dur * FPS), 1500);
-  if (N < 20) throw new Error('That clip is too short to analyse.');
+  if (!vw || !vh) throw new Error('That file has no picture to analyse.');
+  if (N < 20) throw new Error('That clip is too short to analyse. It needs at least a second.');
   const parts = layout === 'both' ? [['side', 0, vw / 2], ['front', vw / 2, vw / 2]] : [[layout, 0, vw]];
-  capMsg('Loading the pose model (first time only)…', 0); const pose = await getPose();
+  capMsg('Loading the pose model (first time only, about 10 MB)…', .03); const pose = await getPose();
   const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true }), views = {};
   parts.forEach(([k, , w]) => views[k] = { w, h: vh, lm: [] });
+  const sc = Math.min(1, 640 / Math.max(...parts.map(p => p[2])));   // pose models work at low resolution; shrinking keeps long 4K clips fast
   for (let i = 0; i < N; i++) {
-    v.currentTime = i / FPS; await once(v, 'seeked');
-    for (const [k, x, w] of parts) { cv.width = w; cv.height = vh; cx.drawImage(v, x, 0, w, vh, 0, 0, w, vh);
+    await seekTo(v, i / FPS);
+    for (const [k, x, w] of parts) { cv.width = Math.round(w * sc); cv.height = Math.round(vh * sc); cx.drawImage(v, x, 0, w, vh, 0, 0, cv.width, cv.height);
       const r = pose.detect(cv), l = r.landmarks && r.landmarks[0]; views[k].lm.push(l ? l.map(p => [p.x, p.y, p.visibility == null ? 1 : p.visibility]) : null); }
-    if (i % 4 === 0) capMsg(`Analysing frame ${i + 1} of ${N}`, (i + 1) / N);
+    if (i % 3 === 0) { capMsg(`Analysing frame ${i + 1} of ${N}`, .05 + .95 * (i + 1) / N); await new Promise(r => setTimeout(r)); }
   }
   const ok = Object.values(views).every(v => v.lm.filter(Boolean).length > N * .5);
-  if (!ok) throw new Error('The body was not found in most frames. Check the whole body is in view and the light is even.');
+  if (!ok) throw new Error('The body was not found in most frames. Check the whole body is in view, the light is even, and the camera was held still.');
   return makeClip(name, url, layout, views, vw, vh);
 }
 function openCap(mode) {
@@ -751,7 +768,7 @@ function openCap(mode) {
 }
 $('#b-capture').onclick = () => openCap(); $('#capX').onclick = () => { stopStream(); $('#cap').close(); };
 $('#capUp').onclick = () => $('#capFile').click();
-$('#capFile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await runAnalysis(f, f.name); };
+$('#capFile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) { capMsg('Opening ' + f.name + '…', .01); await runAnalysis(f, f.name); } };
 async function runAnalysis(file, name) {
   const layout = $('#capView').value;
   try { const clip = await analyzeFile(file, layout, name); if (St.clips.length === 1 && St.clips[0].sample) { St.clips = []; toast('Sample clip replaced by your recording'); }

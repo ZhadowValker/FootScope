@@ -605,8 +605,16 @@ function archFromPhoto(P, refPx, refMm) {
   const h = q => Math.abs((q[0] - P.heel[0]) * fu[1] - (q[1] - P.heel[1]) * fu[0]);    // height above the floor line
   const along = q => dot(sub(q, P.heel), u) / L;                                        // 0 at heel, 1 at toe tip
   const trunc = dot(fl, u), mm = refPx && refMm ? refMm / refPx : null;
-  return { footPx: L, mmPerPx: mm, footMm: mm ? L * mm : null, truncPx: trunc, dorsH: h(P.dors), navH: h(P.nav), soleH: h(P.sole),
+  const r = { footPx: L, mmPerPx: mm, footMm: mm ? L * mm : null, truncPx: trunc, dorsH: h(P.dors), navH: h(P.nav), soleH: h(P.sole),
     ahi: h(P.dors) / trunc, navPct: h(P.nav) / L * 100, clrPct: h(P.sole) / L * 100, dorsAt: along(P.dors), navAt: along(P.nav), ballAt: along(P.ball) };
+  const bad = [];   // sanity checks: a result outside what a human foot can be means a point is misplaced
+  if (r.footMm != null && (r.footMm < 140 || r.footMm > 340)) bad.push('foot length of ' + Math.round(r.footMm) + ' mm is not possible, so the A4 corners or the heel and toe points are off');
+  if (r.clrPct > 25) bad.push('the gap under the arch (' + Math.round(r.clrPct) + '% of foot length) is too large, so the sole point is off');
+  if (r.navPct > 30) bad.push('the navicular height (' + Math.round(r.navPct) + '%) is too high, so the navicular point is off');
+  if (r.ahi < .12 || r.ahi > .6) bad.push('the arch height index (' + r.ahi.toFixed(2) + ') is outside what feet show, so the top-of-foot point is off');
+  if (!(r.ballAt > .45 && r.ballAt < .9)) bad.push('the ball-of-foot point is not in the front half of the foot');
+  if (r.soleH > r.navH + 1) bad.push('the sole point sits above the navicular point');
+  r.bad = bad; return r;
 }
 /* standing photos of the legs from behind or in front. P has, per leg n (L or R): back: Ncalf, Nankle, Nheel; front: Nankle, Ntoe. Picture-left is the person's right from the front and the person's left from behind. */
 function legsFromPhoto(kind, P) {
@@ -615,7 +623,7 @@ function legsFromPhoto(kind, P) {
   return out;
 }
 function photoMetrics(photos) {
-  const out = [], by = { L: null, R: null }; photos.forEach(p => { if ((p.kind || 'arch') === 'arch' && p.res) by[p.side] = p; });
+  const out = [], by = { L: null, R: null }; photos.forEach(p => { if ((p.kind || 'arch') === 'arch' && p.res && !(p.res.bad && p.res.bad.length)) by[p.side] = p; });
   const auto = photos.some(p => p.res && p.res.auto), tail = auto ? '. Some points were placed automatically' : '';
   const defs = [
     ['ahi', 'Arch height index', '×', [.30, .38], 'Height of the top of the foot at half its length, divided by heel-to-ball length', r => r.ahi, 'ahi'],
@@ -1073,6 +1081,7 @@ $('#phAuto').onclick = () => {
   phMsg('Points placed from the picture. Drag any hollow point onto the right spot, then save.'); phDraw(); };
 $('#phSave').onclick = () => {
   const res = phResult(), kind = PH.kind, side = $('#phSide').value, warn = []; res.auto = PH.auto;
+  if (res.bad && res.bad.length) { toast('Not saved: ' + res.bad[0] + '. Drag the points to the right places and try again', 8000); return; }
   if (kind === 'arch') { if (res.dorsAt < .4 || res.dorsAt > .6) warn.push('the top-of-foot point was not near halfway, so the arch height index is rougher'); if (res.navAt < .2 || res.navAt > .6) warn.push('the navicular point looks out of place'); }
   St.photos = St.photos.filter(p => kind === 'arch' ? !((p.kind || 'arch') === 'arch' && p.side === side) : p.kind !== kind); St.photos.push({ kind, side: kind === 'arch' ? side : null, img: PH.img, res, pts: PH.pts.slice(), steps: phSteps() });
   compute(); renderHeader(); renderModel(); renderPanel(); renderCharts(); $('#ph').close();
@@ -1132,9 +1141,13 @@ async function frameShot(ci, view, f, region, side) {
 function photoShot(p) {
   const im = p.img, cv = document.createElement('canvas'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; let box = [0, 0, cv.width, cv.height];
   if (p.kind === 'back' || p.kind === 'front') {   // legs and feet are small in these photos, so crop in on them
-    const xs = p.pts.map(q => q[0]), ys = p.pts.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), m = Math.max(x1 - x0, y1 - y0) * .5 + 60;
-    let w = (x1 - x0) + 2 * m, h = w * 4 / 3; if (y1 - y0 + 2 * m > h) { h = y1 - y0 + 2 * m; w = h * 3 / 4; } w = Math.min(w, cv.width); h = Math.min(h, cv.height);
-    box = [Math.max(0, Math.min(cv.width - w, (x0 + x1) / 2 - w / 2)), Math.max(0, Math.min(cv.height - h, (y0 + y1) / 2 - h / 2)), w, h]; }
+    const xs = p.pts.map(q => q[0]), ys = p.pts.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), sp = Math.max(x1 - x0, y1 - y0);
+    // generous room all round, and extra below the lowest point so the whole foot and the floor show
+    const top = y0 - sp * .35 - 60, bot = y1 + sp * .55 + 100, lef = x0 - sp * .35 - 60, rig = x1 + sp * .35 + 60;
+    let w = rig - lef, h = bot - top; if (h < w * 4 / 3) { const c = (top + bot) / 2; h = w * 4 / 3; } else w = h * 3 / 4;
+    w = Math.min(w, cv.width); h = Math.min(h, cv.height);
+    const cx = (lef + rig) / 2, cy = (top + bot) / 2 + (h - (bot - top)) / 2 * 0;
+    box = [Math.max(0, Math.min(cv.width - w, cx - w / 2)), Math.max(0, Math.min(cv.height - h, (top + bot) / 2 - h / 2)), w, h]; }
   paintPhoto(cv.getContext('2d'), im, p.pts, p.steps, Math.max(1, box[2] / 700), null, p.kind);
   const sc = Math.min(1, 900 / Math.max(box[2], box[3])), o = document.createElement('canvas'); o.width = Math.round(box[2] * sc); o.height = Math.round(box[3] * sc);
   o.getContext('2d').drawImage(cv, box[0], box[1], box[2], box[3], 0, 0, o.width, o.height); return o.toDataURL('image/jpeg', .86);

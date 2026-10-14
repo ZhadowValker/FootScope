@@ -682,7 +682,10 @@ const hasView = view => St.clipOf[view] != null;
 /* ----- header / model ----- */
 function renderHeader() {
   const has = k => St.clipOf[k] != null;
-  $('#vstat').innerHTML = ['side', 'front', 'back'].map(k => `<span class="pill ${has(k) ? 'on' : ''}">${k} ${has(k) ? '✓' + (St.n[k] > 1 ? ' ×' + St.n[k] : '') : '○'}</span>`).join(' ');
+  const ph = (k, s) => (St.photos || []).some(p => p.res && (p.kind || 'arch') === k && (s == null || p.side === s)), live = !!(St.live && St.live.log);
+  const chips = [...['side', 'front', 'back'].map(k => [k, has(k), has(k) && St.n[k] > 1 ? ' ×' + St.n[k] : '']),
+    ['arch L', ph('arch', 'L'), ''], ['arch R', ph('arch', 'R'), ''], ['heel photo', ph('back'), ''], ['front photo', ph('front'), ''], ['live', live, '']];
+  $('#vstat').innerHTML = chips.map(([k, on, x]) => `<span class="pill ${on ? 'on' : ''}">${k} ${on ? '✓' + x : '○'}</span>`).join(' ');
   $('#hdate').textContent = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
 }
 function regionMetrics(r) { return St.metrics.filter(m => m.region === r); }

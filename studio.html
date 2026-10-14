@@ -107,6 +107,7 @@ dialog::backdrop{background:#000a}
 .sgn{display:flex;gap:10px;margin-top:8px;font-size:14px}
 .mk{flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ln2);font-size:13px}
 .mk.yes{border-color:var(--org);color:var(--org)}.mk.no{color:var(--dim)}.mk.na{border-style:dashed;color:var(--dim)}
+dialog{max-height:94vh;overflow:auto}
 </style></head><body>
 <div id="app">
 <header>
@@ -180,6 +181,20 @@ dialog::backdrop{background:#000a}
   <video id="recv" muted playsinline hidden></video>
   <div class="row" id="recRow" hidden><button class="btn p" id="recGo">Start recording</button><span class="mono dim" id="recT"></span></div>
   <div class="prog" id="prog" hidden><i></i></div><div class="note mono" id="capMsg" style="margin-top:8px"></div>
+</div></dialog>
+<dialog id="ph"><div class="dlg">
+  <h3>Foot photo: arch</h3>
+  <p class="dim" id="phHelp" style="margin:0 0 8px">Take or pick a side photo of the inner edge of a standing foot, with the foot on an A4 sheet. Tap the points as asked. The photo stays on this device.</p>
+  <div class="row"><label class="dim">Foot <select id="phSide"><option value="L">Left</option><option value="R">Right</option></select></label>
+  <label class="dim">Scale <select id="phRef"><option value="297">A4 long edge (297 mm)</option><option value="210">A4 short edge (210 mm)</option><option value="">No scale</option></select></label></div>
+  <div class="row"><button class="btn p" id="phGal">Choose photo</button><button class="btn" id="phCamB">Take photo</button><button class="btn" id="phX">Close</button></div>
+  <input type="file" id="phFile" accept="image/*" hidden><input type="file" id="phCam" accept="image/*" capture="environment" hidden>
+  <div id="phWork" hidden>
+    <div class="note mono" id="phStep" style="margin:10px 0 6px;color:var(--mint)"></div>
+    <canvas id="phCv" style="width:100%;touch-action:none;background:#000;border:1px solid var(--ln2);cursor:crosshair"></canvas>
+    <div class="row" style="margin-top:8px"><button class="btn sm" id="phUndo">Undo point</button><button class="btn sm" id="phRedo">Start again</button><button class="btn p" id="phSave" disabled>Save measurement</button></div>
+  </div>
+  <div class="note mono" id="phMsg" style="margin-top:8px"></div>
 </div></dialog>
 <div id="rview" hidden><div class="rbar"><button class="btn p" id="rPrint">Print</button><button class="btn" id="rClose">Close</button></div><div id="report"></div></div>
 <div class="toast mono" id="toast" hidden></div>
@@ -486,7 +501,38 @@ function gaitPatterns(metrics) {
   return P;
 }
 
-if (typeof module !== 'undefined') module.exports = { gaitPatterns, analyzeSide, analyzeFront, ownSteps, buildMetrics, findPeaks, sg7, stillWindow, prep };
+
+/* ----- foot photo (medial view, standing): arch measures from tapped points -----
+   pts: heel, toe, ball (first metatarsal head, at the floor), nav (navicular bump), dors (top of the foot, about halfway along), sole (highest point of the sole under the arch)
+   each [x,y] in image pixels. refPx / refMm: a known length in the picture (A4 edge) or null. */
+function archFromPhoto(P, refPx, refMm) {
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1]], dot = (a, b) => a[0] * b[0] + a[1] * b[1], len = a => Math.hypot(a[0], a[1]);
+  const ax = sub(P.toe, P.heel), L = len(ax), u = [ax[0] / L, ax[1] / L];
+  const fl = sub(P.ball, P.heel), fu = [fl[0] / len(fl), fl[1] / len(fl)];            // floor line: heel to ball
+  const h = q => Math.abs((q[0] - P.heel[0]) * fu[1] - (q[1] - P.heel[1]) * fu[0]);    // height above the floor line
+  const along = q => dot(sub(q, P.heel), u) / L;                                        // 0 at heel, 1 at toe tip
+  const trunc = dot(fl, u), mm = refPx && refMm ? refMm / refPx : null;
+  return { footPx: L, mmPerPx: mm, footMm: mm ? L * mm : null, truncPx: trunc, dorsH: h(P.dors), navH: h(P.nav), soleH: h(P.sole),
+    ahi: h(P.dors) / trunc, navPct: h(P.nav) / L * 100, clrPct: h(P.sole) / L * 100, dorsAt: along(P.dors), navAt: along(P.nav), ballAt: along(P.ball) };
+}
+function photoMetrics(photos) {
+  const out = [], by = { L: null, R: null }; photos.forEach(p => { if (p.res) by[p.side] = p; });
+  const defs = [
+    ['ahi', 'Arch height index', '×', [.30, .38], 'Height of the top of the foot at half its length, divided by heel-to-ball length', r => r.ahi, 'ahi'],
+    ['navp', 'Navicular height, % of foot length', '%', null, 'Height of the inner mid-foot bump above the floor', r => r.navPct],
+    ['archclr', 'Space under the arch, % of foot length', '%', [3, 12], 'Gap between the sole and the floor at its highest point; under about 3% looks flat to the eye (rule of thumb)', r => r.clrPct],
+    ['flen', 'Foot length', 'mm', null, 'Heel to longest toe, from the A4 sheet used as a ruler', r => r.footMm]];
+  for (const [id, label, unit, ref, note, f] of defs) {
+    const g = n => { const p = by[n]; if (!p) return null; const v = f(p.res); return v == null || !isFinite(v) ? null : { v, photo: n }; };
+    const L = g('L'), R = g('R'); if (!L && !R) continue;
+    const m = { region: 'arch', id, label, unit, ref, conf: 'low', note, view: 'photo', photo: true };
+    if (L && R) { m.pair = true; m.L = L; m.R = R; } else { m.pair = false; m.S = L || R; m.label += L ? ' (left foot)' : ' (right foot)'; }
+    m.status = statusOf(m); out.push(m);
+  }
+  return out;
+}
+
+if (typeof module !== 'undefined') module.exports = { archFromPhoto, photoMetrics, gaitPatterns, analyzeSide, analyzeFront, ownSteps, buildMetrics, findPeaks, sg7, stillWindow, prep };
 
 /* ---------- app ---------- */
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -497,7 +543,7 @@ const RECOMMEND = { hip: 'front', knee: 'side', ankle: 'side', heel: 'back', arc
 const toast = (t, ms = 3500) => { const e = $('#toast'); e.textContent = t; e.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => e.hidden = true, ms); };
 const f1 = (v, d = 1) => (Math.abs(v) < 10 ** -d / 2 ? 0 : v).toFixed(d);
 
-const St = { clips: [], active: 0, region: 'knee', an: [], clipOf: {}, n: {}, metrics: [], pose: null };
+const St = { photos: [], clips: [], active: 0, region: 'knee', an: [], clipOf: {}, n: {}, metrics: [], pose: null };
 
 /* ----- clips ----- */
 function makeClip(name, url, layout, views, vw, vh, extra = {}) {
@@ -514,6 +560,7 @@ function compute() {
       if (k === 'back') { an[i].back = analyzeFront(c.views.back, FPS, null, true); backs.push({ res: an[i].back, clip: i }); } } });
   St.an = an; St.clipOf = clipOf; St.n = { side: sides.length, front: fronts.length, back: backs.length };
   St.metrics = (sides.length || fronts.length || backs.length) ? buildMetrics({ sides, fronts, backs }) : [];
+  St.metrics = St.metrics.concat(photoMetrics(St.photos));
 }
 /* the analysis a drawing should use: the one for the clip on screen, else the newest clip that has that view */
 const AN = view => (St.an && St.an[St.active] && St.an[St.active][view]) || (St.clipOf[view] != null ? St.an[St.clipOf[view]][view] : null);
@@ -579,7 +626,7 @@ function renderPanel() {
   h += ms.map(metHtml).join('');
   if (!ms.length) {
     if (r === 'heel') h += `<div class="needs">The rearfoot angle needs a clip filmed from behind with both heels in view, trousers rolled above the calves. Add it and this region fills in.</div>`;
-    else if (r === 'arch') h += `<div class="needs">Arch height and foot posture come from close-up photos with landmarks marked, not from walking video. Open the photo tool to take them: <a href="./index.html">FootScope photo capture</a>.</div>`;
+    else if (r === 'arch') h += `<div class="needs">Arch height comes from a side photo of each standing foot with an A4 sheet under it, not from walking video. Press <b>Add foot photo</b>, then tap the points as asked.</div>`;
     else h += `<div class="needs">Add a ${RECOMMEND[r]}-view video to measure this region.</div>`;
   } else {
     const bad = ms.filter(m => m.status !== 'ok');
@@ -588,12 +635,13 @@ function renderPanel() {
   }
   const rec = RECOMMEND[r];
   h += `<div class="act"><button class="btn p" data-cap="rec">Record video</button><button class="btn" data-cap="up">Upload video</button>` +
-    `<a class="btn" style="text-decoration:none;justify-content:center" href="./index.html">Add close-up photo</a>` +
+    `<button class="btn" data-ph="1">Add foot photo</button>` +
     `<button class="btn" id="b-print2">Full report</button></div>`;
   h += `<p class="note" style="margin-top:18px">Typical ranges are standard adult walking values from gait textbooks. Numbers here come from a single 2-D camera, so they can differ from a lab by several degrees. Use them to spot patterns, not to diagnose.</p>`;
   $('#panel').innerHTML = h;
   $('#b-print2').onclick = () => doPrint();
   $$('#panel [data-cap]').forEach(b => b.onclick = () => openCap(b.dataset.cap));
+  $$('#panel [data-ph]').forEach(b => b.onclick = () => openPhoto());
   $$('#panel [data-seek]').forEach(b => b.onclick = () => { const [id, k] = b.dataset.seek.split('|'); seekMetric(id, k); });
 }
 const PV = { consistent: ['Signs consistent', 'flag'], some: ['Some signs', 'watch'], none: ['Not suggested', 'ok'], cant: ['Cannot check yet', null] };
@@ -672,7 +720,8 @@ function renderTicks() {
   $('#ticks').innerHTML = h;
 }
 function seekFrame(f, view) { if (view && St.clipOf[view] != null && St.clipOf[view] !== St.active) loadClip(St.clipOf[view]); vid.pause(); vid.currentTime = f / FPS; }
-function seekMetric(id, k) { const m = St.metrics.find(x => x.id === id); if (!m) return; const x = k === 'S' ? m.S : m[k]; if (x.clip != null && x.clip !== St.active) loadClip(x.clip); seekFrame(x.frame); toast(`${m.label}: frame ${x.frame}`); }
+function seekMetric(id, k) { const m = St.metrics.find(x => x.id === id); if (!m) return; const x = k === 'S' ? m.S : m[k];
+  if (m.photo) { toast('Measured from the ' + (x.photo === 'L' ? 'left' : 'right') + ' foot photo'); return; } if (x.clip != null && x.clip !== St.active) loadClip(x.clip); seekFrame(x.frame); toast(`${m.label}: frame ${x.frame}`); }
 function layoutRects(c) { const o = {}; if (c.layout === 'both') { o.side = [0, c.vw / 2, c.vh]; o.front = [c.vw / 2, c.vw / 2, c.vh]; } else o[c.layout] = [0, c.vw, c.vh]; return o; }
 const EDG = [[11, 12], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [27, 29], [29, 31], [27, 31], [24, 26], [26, 28], [28, 30], [30, 32], [28, 32]];
 function drawOverlay() {
@@ -801,12 +850,65 @@ function renderReport() {
   let h = `<h1>FootScope movement analysis</h1><div>${nm} · ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} · clips: ${St.clips.map(c => c.name).join(', ')}</div>`;
   h += `<h2>Summary</h2>` + (bad.length ? '<ul>' + bad.map(m => `<li><b>${REG[m.region].name}, ${m.label.toLowerCase()}:</b> ${val(m)} ${m.unit}. ${m.why.join('; ')}.</li>`).join('') + '</ul>' : '<div>Everything measured is inside the typical range.</div>');
   { const ps = gaitPatterns(ms).filter(p => p.verdict === 'consistent' || p.verdict === 'some'); h += `<h2>Gait pattern signs</h2>` + (ps.length ? '<ul>' + ps.map(p => `<li><b>${p.name}</b> (${PV[p.verdict][0].toLowerCase()}): ` + p.signs.filter(s => s.state).map(s => `${s.label.toLowerCase()} (${s.value})`).join('; ') + '.</li>').join('') + '</ul>' : '<div>No walking pattern stood out among those that could be checked.</div>') + `<div class="fine">Pattern signs are screening hints from simple rules of thumb. They point to what is worth examining, and are not a diagnosis.</div>`; }
-  const missing = []; if (St.clipOf.back == null) missing.push('rearfoot alignment (needs a back view)'); missing.push('arch and foot posture (needs close-up photos)'); h += `<div class="fine">Not measured yet: ${missing.join('; ')}.</div>`;
+  const missing = []; if (St.clipOf.back == null) missing.push('rearfoot alignment (needs a back view)'); if (!St.photos.some(p => p.res)) missing.push('arch and foot posture (needs a side photo of each foot)'); h += `<div class="fine">Not measured yet: ${missing.join('; ')}.</div>`;
   h += `<h2>Measurements</h2><table><tr><th>Region</th><th>Measure</th><th>Value</th><th>Unit</th><th>Typical</th><th>Reading</th></tr>` + ms.map(m => `<tr><td>${REG[m.region].name}</td><td>${m.label}</td><td>${val(m)}</td><td>${m.unit}</td><td>${m.ref ? m.ref[0] + ' to ' + m.ref[1] : ''}</td><td class="st ${m.status === 'ok' ? '' : 'f'}">${STX[m.status]}${m.why.length ? ': ' + m.why.join('; ') : ''}</td></tr>`).join('') + '</table>';
   h += `<h2>Curves</h2>`; ['knee', 'hip', 'ankle'].forEach(r => chartDefs(r).forEach(d => { h += `<div style="font-size:11px">${d.t}</div>` + chartSvg(d, { print: true }).svg; }));
   h += `<div class="fine">Typical ranges are standard adult walking values from gait textbooks (for example Perry and Burnfield, Gait Analysis: Normal and Pathological Function). Values come from a single 2-D camera and automatic landmark detection and can differ from a lab measurement by several degrees; ankle and foot figures are the roughest. This screening report is not a diagnosis.</div>`;
   $('#report').innerHTML = h;
 }
+
+
+/* ----- foot photo: tap points on a picture ----- */
+const PH = { img: null, side: 'L', pts: [], steps: [] };
+const PH_STEPS = [['refA', 'A4 sheet: tap one end of a long or short edge you chose above'], ['refB', 'A4 sheet: tap the other end of the same edge'],
+  ['heel', 'Heel: back of the heel where it meets the floor'], ['toe', 'Longest toe: the tip'], ['ball', 'Ball of the foot: inner side, under the big toe joint, at the floor'],
+  ['nav', 'Navicular: the bony bump on the inner mid-foot, just in front of the ankle bone'], ['dors', 'Top of the foot: halfway between heel and toe tip, on the upper surface'],
+  ['sole', 'Arch: the highest point of the sole above the floor, under the arch']];
+const phMsg = t => $('#phMsg').textContent = t || '';
+function phSteps() { return $('#phRef').value ? PH_STEPS : PH_STEPS.slice(2); }
+function openPhoto(side) {
+  PH.side = side || ({ L: 'R', R: 'L' }[(St.photos[St.photos.length - 1] || {}).side] || 'L'); $('#phSide').value = PH.side;
+  $('#phWork').hidden = true; phMsg(''); $('#ph').showModal();
+  if (!side) $('#phFile').click();
+}
+function phLoad(f) {
+  if (!f) return; const url = URL.createObjectURL(f), im = new Image();
+  im.onload = () => { PH.img = im; PH.pts = []; $('#phWork').hidden = false; const cv = $('#phCv'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.style.maxHeight = '70vh'; cv.style.objectFit = 'contain'; phDraw(); };
+  im.onerror = () => phMsg('That picture could not be opened. Try a JPEG or PNG.'); im.src = url;
+}
+function phDraw() {
+  const cv = $('#phCv'), c = cv.getContext('2d'), s = Math.max(cv.width, cv.height) / 900, st = phSteps(); c.drawImage(PH.img, 0, 0);
+  const P = {}; PH.pts.forEach((p, i) => P[st[i][0]] = p);
+  c.lineWidth = 2 * s; c.font = `${14 * s}px monospace`;
+  if (P.refA && P.refB) { c.strokeStyle = '#f0c05a'; c.beginPath(); c.moveTo(...P.refA); c.lineTo(...P.refB); c.stroke(); }
+  if (P.heel && P.toe) { c.strokeStyle = '#7fe3c4'; c.beginPath(); c.moveTo(...P.heel); c.lineTo(...P.toe); c.stroke(); }
+  if (P.heel && P.ball) { c.strokeStyle = '#ffffff'; c.setLineDash([6 * s, 5 * s]); c.beginPath(); c.moveTo(...P.heel); c.lineTo(...P.ball); c.stroke(); c.setLineDash([]); }
+  PH.pts.forEach((p, i) => { c.fillStyle = '#7fe3c4'; c.beginPath(); c.arc(p[0], p[1], 6 * s, 0, 7); c.fill(); c.fillStyle = '#fff'; c.fillText(st[i][0], p[0] + 9 * s, p[1] - 8 * s); });
+  const n = PH.pts.length; $('#phStep').textContent = n < st.length ? `Point ${n + 1} of ${st.length}. ${st[n][1]}` : 'All points set. Check them, then save.';
+  $('#phSave').disabled = n < st.length;
+}
+function phResult() {
+  const st = phSteps(), P = {}; PH.pts.forEach((p, i) => P[st[i][0]] = p);
+  const refPx = P.refA ? Math.hypot(P.refA[0] - P.refB[0], P.refA[1] - P.refB[1]) : null;
+  return archFromPhoto(P, refPx, +$('#phRef').value || null);
+}
+$('#phGal').onclick = () => $('#phFile').click(); $('#phCamB').onclick = () => $('#phCam').click(); $('#phX').onclick = () => $('#ph').close();
+$('#phFile').onchange = e => { phLoad(e.target.files[0]); e.target.value = ''; }; $('#phCam').onchange = e => { phLoad(e.target.files[0]); e.target.value = ''; };
+$('#phRef').onchange = () => { PH.pts = []; if (PH.img) phDraw(); };
+$('#phUndo').onclick = () => { PH.pts.pop(); phDraw(); }; $('#phRedo').onclick = () => { PH.pts = []; phDraw(); };
+$('#phCv').addEventListener('pointerdown', e => {
+  if (!PH.img || PH.pts.length >= phSteps().length) return; const cv = $('#phCv'), r = cv.getBoundingClientRect();
+  const k = Math.min(r.width / cv.width, r.height / cv.height), ox = (r.width - cv.width * k) / 2, oy = (r.height - cv.height * k) / 2;
+  const x = (e.clientX - r.left - ox) / k, y = (e.clientY - r.top - oy) / k; if (x < 0 || y < 0 || x > cv.width || y > cv.height) return;
+  PH.pts.push([x, y]); phDraw(); });
+$('#phSave').onclick = () => {
+  const res = phResult(), side = $('#phSide').value, warn = [];
+  if (res.dorsAt < .4 || res.dorsAt > .6) warn.push('the top-of-foot point was not near halfway, so the arch height index is rougher');
+  if (res.navAt < .2 || res.navAt > .6) warn.push('the navicular point looks out of place');
+  const keep = PH.img; St.photos = St.photos.filter(p => p.side !== side); St.photos.push({ side, img: keep, res });
+  compute(); renderHeader(); renderModel(); renderPanel(); renderCharts(); $('#ph').close();
+  toast(`Arch measured on the ${side === 'L' ? 'left' : 'right'} foot${warn.length ? ': ' + warn[0] : ''}`, 5000);
+};
 
 /* ----- start ----- */
 (function init() {

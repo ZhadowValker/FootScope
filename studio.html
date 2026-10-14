@@ -101,6 +101,12 @@ dialog::backdrop{background:#000a}
  #app,.rbar,.toast,dialog{display:none!important}#rview{position:static;overflow:visible}
  @page{size:A4;margin:14mm}
 }
+
+.pcard{margin-top:12px;padding:14px;border:1px solid var(--ln);border-left:3px solid var(--c);background:var(--pan)}
+.pcard .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sgn{display:flex;gap:10px;margin-top:8px;font-size:14px}
+.mk{flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border:1px solid var(--ln2);font-size:13px}
+.mk.yes{border-color:var(--org);color:var(--org)}.mk.no{color:var(--dim)}.mk.na{border-style:dashed;color:var(--dim)}
 </style></head><body>
 <div id="app">
 <header>
@@ -129,6 +135,7 @@ dialog::backdrop{background:#000a}
     </div>
     <div class="gaitbox">
       <div style="display:flex;justify-content:space-between;align-items:center"><span class="lbl">Whole stride</span><button class="btn sm" data-region="gait">Gait timing</button></div>
+      <button class="btn sm" id="bPat" data-region="pattern" style="margin-top:10px;width:100%;justify-content:center">Gait patterns</button>
       <div class="kv mono" id="gaitkv"></div>
     </div>
     <div class="legend"><span><i style="background:#7fe3c4"></i>Within typical</span><span><i style="background:#f0c05a"></i>Watch</span><span><i style="background:#ff7a59"></i>Flagged</span><span><i style="border:1px dashed #7f9a93"></i>Not measured yet</span></div>
@@ -245,8 +252,11 @@ function analyzeSide(view, fps) {
     const refA = mean(ankRaw.slice(ref[0], ref[1])), af = ankRaw.map(v => refA - v);
     const hs = findPeaks(rel, Math.max(4, Math.round(.4 * fps)), legLen * .15);
     const to_ = findPeaks(rel.map(v => -v), Math.max(4, Math.round(.4 * fps)), legLen * .15);
-    leg[n] = { kf, af, thigh, rel, hs, to: to_, cyc: [] };
+    leg[n] = { kf, af, thigh, rel, hs, to: to_, cyc: [], toeY: Array.from({ length: T }, (_, t) => P[j.toe].y[t]) };
   }
+  /* ground level per leg = where the toe sits during stance (the low end of its path); toe clearance is measured up from there */
+  { const e0 = [...leg.L.hs, ...leg.R.hs].sort((x, y) => x - y), a0 = e0.length ? Math.max(0, e0[0] - 6) : 0, b0 = e0.length ? Math.min(T - 1, e0[e0.length - 1] + 6) : T - 1;
+    for (const n of 'LR') { const ys = leg[n].toeY.slice(a0, b0 + 1).sort((x, y) => x - y); leg[n].ground = ys[Math.floor(.95 * (ys.length - 1))]; } }
   for (const n of 'LR') {
     const r = leg[n];
     for (let i = 0; i + 1 < r.hs.length; i++) {
@@ -257,7 +267,9 @@ function analyzeSide(view, fps) {
       const iSw = argmax(r.kf, tt, b), iLd = argmax(r.kf, a, ldEnd), iSt = argmin(r.kf, a + 3, tt),
         mid = a + Math.floor((tt - a) / 2), iDF = argmax(r.af, a, tt), iPF = argmin(r.af, Math.max(a, tt - 4), tt + 2),
         iHx = argmin(r.thigh, a, tt), iHf = argmax(r.thigh, a, b);
-      r.cyc.push({ a, b, tt, mid, T: len / fps, stance: (tt - a) / len * 100,
+      const sw0 = tt + Math.round(.25 * (b - tt)), sw1 = tt + Math.round(.85 * (b - tt)); let clr = Infinity;
+      for (let t = sw0; t <= Math.min(sw1, T - 1); t++) clr = Math.min(clr, r.ground - r.toeY[t]);
+      r.cyc.push({ a, b, tt, mid, T: len / fps, stance: (tt - a) / len * 100, clr: [clr / legLen * 100, sw0], dfsw: [r.af[tt + Math.round(.5 * (b - tt))], tt + Math.round(.5 * (b - tt))],
         kf_swing: [r.kf[iSw], iSw], kf_load: [r.kf[iLd], iLd], kf_stmin: [r.kf[iSt], iSt],
         df: [r.af[iDF], iDF], pf: [-r.af[iPF], iPF], df_mid: [r.af[mid], mid],
         hip_ext: [-r.thigh[iHx], iHx], hip_flex: [r.thigh[iHf], iHf] });
@@ -269,13 +281,17 @@ function analyzeSide(view, fps) {
   for (const [h, n] of ev) { const o = n === 'L' ? 'R' : 'L'; stepL.push([faces * (P[J[n].ank].x[h] - P[J[o].ank].x[h]) / legLen, n, h]); }
   const trunk = Array.from({ length: T }, (_, t) => { const h = hipc(t), sx = (P[11].x[t] + P[12].x[t]) / 2, sy = (P[11].y[t] + P[12].y[t]) / 2; return Math.atan2(faces * (sx - h[0]), h[1] - sy) * DEG; });
   const w0 = ev.length ? Math.max(0, ev[0][0] - 6) : 0, w1 = ev.length ? Math.min(T - 1, ev[ev.length - 1][0] + 6) : T - 1;
-  return { T, fps, faces, ref, legLen, leg, ev, stepT, stepL, trunk, win: [w0, w1], P };
+  const arm = {};
+  for (const [n, w, sh] of [['L', 15, 11], ['R', 16, 12]]) { const ang = Array.from({ length: T }, (_, t) => Math.atan2(faces * (P[w].x[t] - P[sh].x[t]), P[w].y[t] - P[sh].y[t]) * DEG).slice(w0, w1 + 1); arm[n] = Math.max(...ang) - Math.min(...ang); }
+  const cvOf = a => a.length >= 3 && mean(a) ? sd(a) / mean(a) * 100 : null;
+  const cv = { stride: cvOf([...leg.L.cyc, ...leg.R.cyc].map(c => c.T)), step: cvOf(stepT), steplen: cvOf(stepL.filter(x => x[2] < w1 - 8).map(x => x[0])), n: stepT.length };
+  return { T, fps, faces, ref, legLen, leg, ev, stepT, stepL, trunk, arm, cv, win: [w0, w1], P };
 }
 
 function analyzeFront(view, fps, ev, back) {
   const P = prep(view); if (!P) return null; const T = P.T;
   const ref = stillWindow(P), hw = Array.from({ length: T }, (_, t) => Math.hypot(P[23].x[t] - P[24].x[t], P[23].y[t] - P[24].y[t]));
-  const pel = Array.from({ length: T }, (_, t) => Math.atan2(P[23].y[t] - P[24].y[t], P[23].x[t] - P[24].x[t]) * DEG);
+  const pel = Array.from({ length: T }, (_, t) => Math.atan2(P[23].y[t] - P[24].y[t], Math.abs(P[23].x[t] - P[24].x[t])) * DEG);   // + : left hip lower, in both front and back views
   const sway = Array.from({ length: T }, (_, t) => ((P[11].x[t] + P[12].x[t]) / 2 - (P[23].x[t] + P[24].x[t]) / 2) / hw[t]);
   // lateral direction in the image for each leg: front view L leg is at image right, back view at image left
   const lat = back ? { L: -1, R: 1 } : { L: 1, R: -1 };
@@ -287,7 +303,19 @@ function analyzeFront(view, fps, ev, back) {
     const s = [a[0] - k[0], a[1] - k[1]], v = [h[0] - a[0], h[1] - a[1]];
     return Math.atan2((s[0] * v[1] - s[1] * v[0]) * lat[n], s[0] * v[0] + s[1] * v[1]) * DEG; };
   const own = ownSteps(P, back, fps, hw);
-  return { T, P, ref, hw, pel, sway, frontal, rear, lat, ...own };
+  /* pelvic drop on the swing side while standing on leg n (+ = the free side is lower) */
+  const dropAt = (n, t) => { let v = 0, c = 0; for (let k = Math.max(0, t - 1); k <= Math.min(T - 1, t + 1); k++) { v += pel[k]; c++; } v /= c; return n === 'L' ? -v : v; };
+  /* how far the ankle swings out sideways (÷ hip width) beyond where it sits in mid-stance, per step of leg n */
+  const latOff = (n, t) => (P[J[n].ank].x[t] - P[J[n].hip].x[t]) * lat[n] / hw[t];
+  const swing = n => { const out = [], base = own.mids[n].length ? mean(own.mids[n].map(m => latOff(n, m))) : null; if (base == null) return out;
+    const o = n === 'L' ? 'R' : 'L', ev = own.ev;
+    for (let i = 0; i + 1 < ev.length; i++) if (ev[i][1] === o && ev[i + 1][1] === n) { let mx = -Infinity, fm = ev[i][0]; for (let t = ev[i][0]; t <= ev[i + 1][0]; t++) { const v = latOff(n, t); if (v > mx) { mx = v; fm = t; } } out.push({ v: mx - base, frame: fm }); }
+    return out; };
+  const sgn = back ? -1 : 1, gap = t => (P[27].x[t] - P[28].x[t]) / hw[t] * sgn;
+  const gaps = []; for (let i = 0; i + 1 < own.ev.length; i++) { let mn = Infinity, fm = own.ev[i][0]; for (let t = own.ev[i][0]; t <= own.ev[i + 1][0]; t++) if (gap(t) < mn) { mn = gap(t); fm = t; } gaps.push({ v: mn, frame: fm }); }
+  const widths = own.ev.map(([h]) => Math.abs(P[27].x[h] - P[28].x[h]) / hw[h]).filter(v => v > .3);
+  const wcv = widths.length >= 4 && mean(widths) ? sd(widths) / mean(widths) * 100 : null;
+  return { T, P, ref, hw, pel, sway, frontal, rear, lat, dropAt, swing, gaps, wcv, ...own };
 }
 
 /* Steps from a front or back clip alone: the leading foot is nearest (front) or farthest (back) from the camera, so the two ankles
@@ -318,12 +346,13 @@ const REG = {
   heel: { name: 'Rearfoot and heel', sub: 'Heel alignment, from the back view', joints: [29, 30] },
   arch: { name: 'Arch and midfoot', sub: 'Arch height and foot posture, from close-up photos', joints: [27, 28, 29, 30, 31, 32] },
   fore: { name: 'Forefoot and toe-off', sub: 'Stance time, step length and base of support', joints: [31, 32] },
-  gait: { name: 'Gait timing', sub: 'Cadence and stride timing', joints: [27, 28] }
+  gait: { name: 'Gait timing', sub: 'Cadence, stride timing, arm swing and step-to-step variation', joints: [27, 28] },
+  pattern: { name: 'Gait patterns', sub: 'Which common walking patterns the measurements point towards', joints: [23, 24, 25, 26, 27, 28, 29, 30, 31, 32] }
 };
 
 function buildMetrics(S) {
   /* S = { sides:[{res,clip}], fronts:[...], backs:[...] }  — every clip of a view is pooled, so extra walks make the numbers steadier */
-  const out = [], sides = S.sides || [], fronts = S.fronts || [], backs = S.backs || [];
+  const out = [], sides = S.sides || [], backs = S.backs || [], fronts = (S.fronts || []).concat(backs);   // front and back clips both give the 'from the camera' measures
   const pool = (items) => { // items: [{v,frame,clip}] -> one value with spread and count
     items = items.filter(x => x && isFinite(x.v)); if (!items.length) return null; const v = items.map(x => x.v);
     return { v: mean(v), sd: v.length > 1 ? sd(v) : 0, n: items.reduce((s, x) => s + (x.n || 1), 0), frame: items[0].frame, clip: items[0].clip }; };
@@ -345,6 +374,11 @@ function buildMetrics(S) {
     pair('fore', 'stance', 'Stance phase', '% of stride', [57, 63], 'high', 'Time the foot is on the ground', n => cyc(n, 'stance'));
     pair('fore', 'stepl', 'Step length, ÷ leg length', '×', null, 'med', 'Ankle gap at heel strike', n => pool(sides.flatMap(a => a.res.stepL.filter(x => x[1] === n && x[2] < a.res.win[1] - 8).map(x => ({ v: x[0], frame: x[2], clip: a.clip, n: 1 })))));
     single('gait', 'cad', 'Cadence', 'steps/min', one(sides, a => a.res.stepT.length ? { v: 60 / mean(a.res.stepT), frame: a.res.ev[0][0], n: a.res.stepT.length } : null), [100, 120], 'high', 'From heel strike to heel strike');
+    pair('ankle', 'dfsw', 'Ankle angle in mid-swing', '°', [-5, 10], 'low', 'Against the standing pose; negative means the toes point down', n => cyc(n, 'dfsw'));
+    pair('fore', 'clr', 'Toe clearance in swing, % of leg length', '%', null, 'low', 'Lowest toe height while the leg swings through', n => cyc(n, 'clr'));
+    pair('gait', 'arm', 'Arm swing, front to back', '°', null, 'low', 'Range of the arm angle during the walk', n => one(sides, a => ({ v: a.res.arm[n], frame: a.res.win[0] })));
+    single('gait', 'cvT', 'Step-time variation', '%', one(sides, a => a.res.cv.step == null ? null : { v: a.res.cv.step, frame: a.res.win[0], n: a.res.cv.n }), null, 'med', 'Spread of step times, as % of the average; needs 6+ steps');
+    single('gait', 'cvL', 'Step-length variation', '%', one(sides, a => a.res.cv.steplen == null ? null : { v: a.res.cv.steplen, frame: a.res.win[0], n: a.res.cv.n }), null, 'low', 'Spread of step lengths, as % of the average; needs 6+ steps');
     single('gait', 'stride', 'Stride time', 's', pool(sides.flatMap(a => ['L', 'R'].flatMap(n => a.res.leg[n].cyc.map(c => ({ v: c.T, frame: c.a, clip: a.clip, n: 1 }))))), [0.9, 1.3], 'high', 'One full cycle of one leg');
   }
   if (fronts.length) {
@@ -353,17 +387,22 @@ function buildMetrics(S) {
     /* mid-stance frames: from the side view of the same clip when there is one, otherwise from the front clip's own steps */
     const mids = (a, n) => { const sd_ = sides.find(x => x.clip === a.clip); return sd_ ? sd_.res.leg[n].cyc.map(c => c.mid) : a.res.mids[n]; };
     pair('knee', 'kfr', 'Frontal alignment, mid-stance', '° (+ out, − in)', [-4, 4], 'low', 'Knee against hip-to-ankle line, front view', n => pool(fronts.flatMap(a => mids(a, n).map(m => ({ v: a.res.frontal(n, m), frame: m, clip: a.clip, n: 1 })))));
+    pair('hip', 'pdl', 'Pelvic drop on the free side, in stance', '°', [-5, 5], 'med', 'Pelvis tilt at mid-stance; the leg named is the one standing', n => pool(fronts.flatMap(a => mids(a, n).map(m => ({ v: a.res.dropAt(n, m), frame: m, clip: a.clip, n: 1 })))));
+    pair('fore', 'lat', 'Foot swing outwards, ÷ hip width', '×', null, 'low', 'How far the ankle swings out, beyond its mid-stance position', n => pool(fronts.flatMap(a => a.res.swing(n).map(x => ({ v: x.v, frame: x.frame, clip: a.clip, n: 1 })))));
+    { const g = fronts.flatMap(a => a.res.gaps.map(x => ({ v: x.v, frame: x.frame, clip: a.clip, n: 1 }))), gp = pool(g); if (gp) { gp.v = Math.min(...g.map(x => x.v)); gp.cross = g.filter(x => x.v < 0).length / g.length; gp.steps = g.length;
+      single('fore', 'gapmin', 'Narrowest ankle gap, ÷ hip width', '×', gp, null, 'low', 'Closest the ankles get; below 0 means they cross'); } }
+    single('gait', 'cvW', 'Step-width variation', '%', one(fronts, a => a.res.wcv == null ? null : { v: a.res.wcv, frame: a.res.win[0], n: a.res.ev.length }), null, 'low', 'Spread of step widths, as % of the average; needs 6+ steps');
     const swv = fronts.flatMap(a => { const sd_ = sides.find(x => x.clip === a.clip), evs = sd_ ? sd_.res.ev : a.res.ev;
       return evs.map(([h]) => ({ v: Math.abs(a.res.P[27].x[h] - a.res.P[28].x[h]) / a.res.hw[h], frame: h, clip: a.clip, n: 1 })).filter(x => x.v > .3); });
     const swp = pool(swv); if (swp) swp.v = median(swv.map(x => x.v));
     single('fore', 'stepw', 'Step width, ÷ hip width', '×', swp, null, 'low', 'Gap between the ankles at heel strike');
   }
-  if (backs.length) {
-    const sta = n => one(backs, a => { const v = []; for (let t = a.res.ref[0]; t < a.res.ref[1]; t++) v.push(a.res.rear(n, t)); return { v: mean(v), frame: a.res.ref[0] }; });
+  if (S.backs && S.backs.length) {
+    const sta = n => one(S.backs, a => { const v = []; for (let t = a.res.ref[0]; t < a.res.ref[1]; t++) v.push(a.res.rear(n, t)); return { v: mean(v), frame: a.res.ref[0] }; });
     pair('heel', 'rear', 'Rearfoot angle, standing (+ valgus)', '°', [-2, 6], 'low', 'Shank axis against heel axis, back view', sta);
-    pair('heel', 'rearm', 'Rearfoot angle, mid-stance (+ valgus)', '°', [-2, 8], 'low', 'Same angle while walking, from the back view', n => pool(backs.flatMap(a => a.res.mids[n].map(m => { const v = []; for (let t = Math.max(0, m - 2); t <= Math.min(a.res.T - 1, m + 2); t++) v.push(a.res.rear(n, t)); return { v: mean(v), frame: m, clip: a.clip, n: 1 }; }))));
+    pair('heel', 'rearm', 'Rearfoot angle, mid-stance (+ valgus)', '°', [-2, 8], 'low', 'Same angle while walking, from the back view', n => pool(S.backs.flatMap(a => a.res.mids[n].map(m => { const v = []; for (let t = Math.max(0, m - 2); t <= Math.min(a.res.T - 1, m + 2); t++) v.push(a.res.rear(n, t)); return { v: mean(v), frame: m, clip: a.clip, n: 1 }; }))));
   }
-  const VIEW = { pelv: 'front', sway: 'front', kfr: 'front', stepw: 'front', rear: 'back', rearm: 'back' };
+  const VIEW = { pelv: 'front', sway: 'front', kfr: 'front', stepw: 'front', pdl: 'front', lat: 'front', gapmin: 'front', cvW: 'front', rear: 'back', rearm: 'back' };
   for (const m of out) { m.view = VIEW[m.id] || 'side'; m.status = statusOf(m); }
   return out;
 }
@@ -385,7 +424,69 @@ function statusOf(m) {
   m.why = why; return s;
 }
 const worst = (ms) => ms.reduce((s, m) => ({ ok: 0, watch: 1, flag: 2 }[m.status] > { ok: 0, watch: 1, flag: 2 }[s] ? m.status : s), 'ok');
-if (typeof module !== 'undefined') module.exports = { analyzeSide, analyzeFront, ownSteps, buildMetrics, findPeaks, sg7, stillWindow, prep };
+
+/* ---------- gait pattern hints ----------
+   Each pattern lists simple, visible signs (rules of thumb, not validated cut-offs). A pattern is "consistent" only when every sign
+   that could be checked is present. These are screening hints for the clinician and never a diagnosis. */
+function gaitPatterns(metrics) {
+  const m = id => metrics.find(x => x.id === id), asym = x => x ? Math.abs(x.L.v - x.R.v) / ((Math.abs(x.L.v) + Math.abs(x.R.v)) / 2 || 1) * 100 : null;
+  const f = (v, d = 1) => v == null ? '' : v.toFixed(d), sign = (label, value, state, rule) => ({ label, value, state, rule });
+  const lower = (x, d = 1) => x ? (x.L.v < x.R.v ? 'left' : 'right') : '';
+  const stance = m('stance'), stepl = m('stepl'), pdl = m('pdl'), sway = m('sway'), clr = m('clr'), dfsw = m('dfsw'), arm = m('arm'), trunk = m('trunk'),
+    lat = m('lat'), gap = m('gapmin'), stepw = m('stepw'), cvT = m('cvT'), cvW = m('cvW');
+  const P = [];
+  const add = (id, name, see, cause, minChecked, signs, needs) => { const ch = signs.filter(x => x.state !== null), tr = ch.filter(x => x.state).length;
+    let verdict = !ch.length ? 'cant' : tr === 0 ? 'none' : (tr === ch.length && ch.length >= minChecked) ? 'consistent' : 'some';
+    P.push({ id, name, see, cause, signs, needs, verdict, status: { cant: 'nd', none: 'ok', some: 'watch', consistent: 'flag' }[verdict] }); };
+  // antalgic
+  { const a = asym(stance), b = asym(stepl);
+    add('antalgic', 'Antalgic', 'Short stance on the sore leg', 'Pain', 2, [
+      sign('Stance time differs between legs', stance ? `L ${f(stance.L.v)}% · R ${f(stance.R.v)}%, shorter on ${lower(stance)}` : '', stance ? (a >= 8 && Math.abs(stance.L.v - stance.R.v) >= 3) : null, 'differs by 8% or more, and 3 points or more'),
+      sign('Step length differs between legs', stepl ? `L ${f(stepl.L.v, 2)} · R ${f(stepl.R.v, 2)} × leg` : '', stepl ? (b >= 10 && Math.abs(stepl.L.v - stepl.R.v) >= .1) : null, 'differs by 10% or more, and 0.1 leg lengths or more')], stance ? [] : ['a side-view video']); }
+  // trendelenburg
+  { const dl = pdl && pdl.L.v, dr = pdl && pdl.R.v;
+    add('trendelenburg', 'Trendelenburg', 'Pelvis drops on the swing side', 'Weak hip abductors', 2, [
+      sign('Pelvis drops on the free side in stance', pdl ? `standing on L ${f(dl)}° · on R ${f(dr)}°` : '', pdl ? (Math.max(dl, dr) > 5) : null, 'drop of more than 5° on at least one side'),
+      sign('Only one side drops', pdl ? `${dl > 5 ? 'L' : ''}${dr > 5 ? ' R' : ''}`.trim() || 'neither' : '', pdl ? ((dl > 5) !== (dr > 5)) : null, 'one side above 5°, the other not')], pdl ? [] : ['a front or back video']); }
+  // waddling
+  add('waddling', 'Waddling', 'Pelvis tilts side to side', 'Proximal weakness, hip problems', 2, [
+    sign('Pelvis drops on both sides', pdl ? `L ${f(pdl.L.v)}° · R ${f(pdl.R.v)}°` : '', pdl ? (pdl.L.v > 5 && pdl.R.v > 5) : null, 'more than 5° on both sides'),
+    sign('Trunk sways side to side', sway ? `${f(sway.S.v, 2)} × hip width` : '', sway ? sway.S.v >= .35 : null, '0.35 hip widths or more')], pdl ? [] : ['a front or back video']);
+  // steppage
+  { const lo = clr ? (clr.L.v < clr.R.v ? 'L' : 'R') : null, loV = clr && Math.min(clr.L.v, clr.R.v), hiV = clr && Math.max(clr.L.v, clr.R.v);
+    add('steppage', 'Steppage', 'High knee lift, foot slaps down', 'Foot drop, peroneal nerve', 2, [
+      sign('One toe clears the floor much less', clr ? `L ${f(clr.L.v, 1)}% · R ${f(clr.R.v, 1)}% of leg` : '', clr ? (loV < 1 && loV < .5 * hiV) : null, 'under 1% of leg length, and under half of the other side'),
+      sign('That ankle points further down in swing', dfsw && lo ? `${lo} ${f(lo === 'L' ? dfsw.L.v : dfsw.R.v)}° against ${f(lo === 'L' ? dfsw.R.v : dfsw.L.v)}°` : '', dfsw && lo ? ((lo === 'L' ? dfsw.R.v - dfsw.L.v : dfsw.L.v - dfsw.R.v) >= 10) : null, '10° or more lower than the other ankle')], clr ? [] : ['a side-view video']); }
+  // parkinsonian
+  { const sl = stepl && (stepl.L.v + stepl.R.v) / 2, lowClr = clr && clr.L.v < 1 && clr.R.v < 1;
+    add('parkinsonian', 'Parkinsonian', 'Short shuffling steps, stooped, no arm swing', "Parkinson's disease", 3, [
+      sign('Short steps', stepl ? `${f(sl, 2)} × leg length` : '', stepl ? sl < .6 : null, 'under 0.6 leg lengths'),
+      sign('Little arm swing, both sides', arm ? `L ${f(arm.L.v, 0)}° · R ${f(arm.R.v, 0)}°` : '', arm ? (arm.L.v < 15 && arm.R.v < 15) : null, 'under 15° on both sides'),
+      sign('Stooped forward', trunk ? `${f(trunk.S.v)}°` : '', trunk ? trunk.S.v > 10 : null, 'more than 10° forward'),
+      sign('Feet barely lift (shuffle)', clr ? `L ${f(clr.L.v, 1)}% · R ${f(clr.R.v, 1)}% of leg` : '', clr ? lowClr : null, 'under 1% of leg length on both sides')], stepl ? [] : ['a side-view video']); }
+  // hemiplegic
+  { const hi = lat && Math.max(lat.L.v, lat.R.v), lo = lat && Math.min(lat.L.v, lat.R.v), aa = asym(arm);
+    add('hemiplegic', 'Hemiplegic', 'Leg swung out in an arc, arm held in', 'Stroke', 2, [
+      sign('One leg swings out in an arc', lat ? `L ${f(lat.L.v, 2)} · R ${f(lat.R.v, 2)} × hip width` : '', lat ? (hi >= .4 && hi >= 2 * Math.max(lo, .05)) : null, '0.4 hip widths or more, and twice the other side'),
+      sign('Arm swing unequal', arm ? `L ${f(arm.L.v, 0)}° · R ${f(arm.R.v, 0)}°` : '', arm ? aa >= 40 : null, 'differs by 40% or more'),
+      sign('Stance time unequal', stance ? `L ${f(stance.L.v)}% · R ${f(stance.R.v)}%` : '', stance ? (asym(stance) >= 8 && Math.abs(stance.L.v - stance.R.v) >= 3) : null, 'differs by 8% or more')], lat ? [] : ['a front or back video']); }
+  // scissoring
+  add('scissoring', 'Scissoring', 'Knees cross, toes drag', 'Spastic diplegia', 2, [
+    sign('Ankles cross the midline', gap ? `crossed on ${Math.round(gap.S.cross * 100)}% of steps` : '', gap ? gap.S.cross >= .5 : null, 'on half the steps or more'),
+    sign('Narrow base', stepw ? `${f(stepw.S.v, 2)} × hip width` : '', stepw ? stepw.S.v < .5 : null, 'under 0.5 hip widths')], gap ? [] : ['a front or back video']);
+  // ataxias
+  const wide = stepw ? stepw.S.v >= 1.5 : null, enough = cvT && cvT.S.n >= 6;
+  const varSign = sign('Step times uneven', cvT ? (enough ? `${f(cvT.S.v)}% variation` : `${f(cvT.S.v)}% (only ${cvT.S.n} steps, need 6)`) : '', cvT ? (enough ? cvT.S.v >= 8 : null) : null, '8% variation or more, with at least 6 steps (25 fps video blurs timing by about 4%)');
+  add('sensory', 'Sensory ataxic', 'Wide base, stamping, watching the feet', 'Loss of position sense', 2, [
+    sign('Wide base', stepw ? `${f(stepw.S.v, 2)} × hip width` : '', wide, '1.5 hip widths or more'), varSign,
+    sign('Worse with eyes closed', 'use the balance test, eyes open against closed', null, 'cannot be seen in walking video')], stepw ? [] : ['a front or back video']);
+  add('cerebellar', 'Cerebellar ataxic', 'Wide, staggering, drunk-like', 'Cerebellar disease', 3, [
+    sign('Wide base', stepw ? `${f(stepw.S.v, 2)} × hip width` : '', wide, '1.5 hip widths or more'), varSign,
+    sign('Trunk sways side to side', sway ? `${f(sway.S.v, 2)} × hip width` : '', sway ? sway.S.v >= .4 : null, '0.4 hip widths or more')], stepw ? [] : ['a front or back video']);
+  return P;
+}
+
+if (typeof module !== 'undefined') module.exports = { gaitPatterns, analyzeSide, analyzeFront, ownSteps, buildMetrics, findPeaks, sg7, stillWindow, prep };
 
 /* ---------- app ---------- */
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -440,6 +541,7 @@ function renderModel() {
   if (st) rows.push(['Stride time', f1(st.S.v, 2) + ' s']);
   if (stn) rows.push(['Stance L / R', f1(stn.L.v, 0) + ' / ' + f1(stn.R.v, 0) + ' %']);
   if (sl) rows.push(['Step length', f1((sl.L.v + sl.R.v) / 2, 2) + ' × leg']);
+  { const pb = $('#bPat'); if (pb) { const ps = gaitPatterns(St.metrics), k = ps.filter(p => p.verdict === 'consistent').length, w = ps.filter(p => p.verdict === 'some').length; pb.innerHTML = 'Gait patterns' + (k || w ? ` <span class="mono" style="color:${k ? COL.flag : COL.watch}">${k || w}</span>` : ''); } }
   g.innerHTML = rows.length ? rows.map(r => `<span class="dim">${r[0]}</span><b>${r[1]}</b>`).join('') : '<span class="dim" style="grid-column:1/3">Add a side-view video to measure timing.</span>';
 }
 
@@ -471,6 +573,7 @@ const MISSING = {
   fore: [['front', 'Step width needs a front view.']]
 };
 function renderPanel() {
+  if (St.region === 'pattern') { renderPatterns(); return; }
   const r = St.region, R = REG[r], ms = regionMetrics(r), st = ms.length ? worst(ms) : null, c = st ? COL[st] : '#7f9a93';
   let h = `<span class="tag mono" style="--c:${c}">${st ? STX[st] : 'Not measured yet'}</span><h2>${R.name}</h2><p class="dim" style="margin:0 0 8px">${R.sub}</p>`;
   h += ms.map(metHtml).join('');
@@ -492,6 +595,19 @@ function renderPanel() {
   $('#b-print2').onclick = () => doPrint();
   $$('#panel [data-cap]').forEach(b => b.onclick = () => openCap(b.dataset.cap));
   $$('#panel [data-seek]').forEach(b => b.onclick = () => { const [id, k] = b.dataset.seek.split('|'); seekMetric(id, k); });
+}
+const PV = { consistent: ['Signs consistent', 'flag'], some: ['Some signs', 'watch'], none: ['Not suggested', 'ok'], cant: ['Cannot check yet', null] };
+function renderPatterns() {
+  const ps = gaitPatterns(St.metrics), ord = { consistent: 0, some: 1, none: 2, cant: 3 }; ps.sort((x, y) => ord[x.verdict] - ord[y.verdict]);
+  const n = k => ps.filter(p => p.verdict === k).length;
+  let h = `<span class="tag mono" style="--c:${n('consistent') ? COL.flag : n('some') ? COL.watch : COL.ok}">${n('consistent') ? n('consistent') + ' to review' : n('some') ? 'A few signs' : 'Nothing standing out'}</span><h2>Gait patterns</h2><p class="dim" style="margin:0 0 8px">${REG.pattern.sub}. Each pattern lists the signs it looks for and what was measured.</p>`;
+  h += `<div class="note" style="margin-bottom:6px">${n('consistent')} consistent · ${n('some')} some signs · ${n('none')} not suggested · ${n('cant')} cannot check yet</div>`;
+  for (const p of ps) { const [lab, st] = PV[p.verdict], c = st ? COL[st] : '#7f9a93';
+    h += `<div class="pcard" style="--c:${c}"><div class="top"><b>${p.name}</b><span class="tag mono" style="--c:${c}">${lab}</span></div><div class="note" style="margin:2px 0 8px">${p.see}</div>` +
+      p.signs.map(s => `<div class="sgn"><span class="mk mono ${s.state === null ? 'na' : s.state ? 'yes' : 'no'}">${s.state === null ? '–' : s.state ? '✓' : '×'}</span><div><div>${s.label}</div><div class="mono dim" style="font-size:12px">${s.value || 'not measured'}</div><div class="dim" style="font-size:12px">${s.state === null && !s.value ? '' : 'Looks for: '}${s.rule}</div></div></div>`).join('') +
+      (p.needs.length ? `<div class="note">Needs ${p.needs.join(' and ')}.</div>` : '') + `<div class="note">Often linked to: ${p.cause}</div></div>`; }
+  h += `<p class="note" style="margin-top:18px">These are screening hints built from simple rules of thumb, not validated cut-offs. Several patterns share signs, and one phone camera cannot tell a nerve problem from a joint problem. A flag means "worth a closer look", never a diagnosis.</p>`;
+  $('#panel').innerHTML = h;
 }
 function setRegion(r) { St.region = r; renderModel(); renderPanel(); renderCharts(); drawOverlay(); }
 
@@ -667,6 +783,7 @@ function renderReport() {
   const val = m => m.pair ? `L ${f1(m.L.v, m.unit === '×' ? 2 : 1)} · R ${f1(m.R.v, m.unit === '×' ? 2 : 1)}` : f1(m.S.v, m.unit === 's' || m.unit === '×' ? 2 : 1);
   let h = `<h1>FootScope movement analysis</h1><div>${nm} · ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} · clips: ${St.clips.map(c => c.name).join(', ')}</div>`;
   h += `<h2>Summary</h2>` + (bad.length ? '<ul>' + bad.map(m => `<li><b>${REG[m.region].name}, ${m.label.toLowerCase()}:</b> ${val(m)} ${m.unit}. ${m.why.join('; ')}.</li>`).join('') + '</ul>' : '<div>Everything measured is inside the typical range.</div>');
+  { const ps = gaitPatterns(ms).filter(p => p.verdict === 'consistent' || p.verdict === 'some'); h += `<h2>Gait pattern signs</h2>` + (ps.length ? '<ul>' + ps.map(p => `<li><b>${p.name}</b> (${PV[p.verdict][0].toLowerCase()}): ` + p.signs.filter(s => s.state).map(s => `${s.label.toLowerCase()} (${s.value})`).join('; ') + '.</li>').join('') + '</ul>' : '<div>No walking pattern stood out among those that could be checked.</div>') + `<div class="fine">Pattern signs are screening hints from simple rules of thumb. They point to what is worth examining, and are not a diagnosis.</div>`; }
   const missing = []; if (St.clipOf.back == null) missing.push('rearfoot alignment (needs a back view)'); missing.push('arch and foot posture (needs close-up photos)'); h += `<div class="fine">Not measured yet: ${missing.join('; ')}.</div>`;
   h += `<h2>Measurements</h2><table><tr><th>Region</th><th>Measure</th><th>Value</th><th>Unit</th><th>Typical</th><th>Reading</th></tr>` + ms.map(m => `<tr><td>${REG[m.region].name}</td><td>${m.label}</td><td>${val(m)}</td><td>${m.unit}</td><td>${m.ref ? m.ref[0] + ' to ' + m.ref[1] : ''}</td><td class="st ${m.status === 'ok' ? '' : 'f'}">${STX[m.status]}${m.why.length ? ': ' + m.why.join('; ') : ''}</td></tr>`).join('') + '</table>';
   h += `<h2>Curves</h2>`; ['knee', 'hip', 'ankle'].forEach(r => chartDefs(r).forEach(d => { h += `<div style="font-size:11px">${d.t}</div>` + chartSvg(d, { print: true }).svg; }));

@@ -227,7 +227,7 @@ dialog{max-height:94vh;overflow:auto}
   <div id="phWork" hidden>
     <div class="note mono" id="phStep" style="margin:10px 0 6px;color:var(--mint)"></div>
     <canvas id="phCv" style="width:100%;touch-action:none;background:#000;border:1px solid var(--ln2);cursor:crosshair"></canvas>
-    <div class="row" style="margin-top:8px"><button class="btn sm" id="phUndo">Undo point</button><button class="btn sm" id="phRedo">Start again</button><button class="btn p" id="phSave" disabled>Save measurement</button></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm" id="phUndo">Undo point</button><button class="btn sm" id="phRedo">Start again</button><button class="btn sm" id="phAuto" title="Needs the heel and toe tip tapped first">Auto-place points</button><button class="btn p" id="phSave" disabled>Save measurement</button></div>
   </div>
   <div class="note mono" id="phMsg" style="margin-top:8px"></div>
 </div></dialog>
@@ -560,7 +560,7 @@ function photoMetrics(photos) {
   for (const [id, label, unit, ref, note, f] of defs) {
     const g = n => { const p = by[n]; if (!p) return null; const v = f(p.res); return v == null || !isFinite(v) ? null : { v, photo: n }; };
     const L = g('L'), R = g('R'); if (!L && !R) continue;
-    const m = { region: 'arch', id, label, unit, ref, conf: 'low', note, view: 'photo', photo: true };
+    const m = { region: 'arch', id, label, unit, ref, conf: 'low', note: note + ((by.L && by.L.res.auto) || (by.R && by.R.res.auto) ? '. Some points were placed automatically' : ''), view: 'photo', photo: true };
     if (L && R) { m.pair = true; m.L = L; m.R = R; } else { m.pair = false; m.S = L || R; m.label += L ? ' (left foot)' : ' (right foot)'; }
     m.status = statusOf(m); out.push(m);
   }
@@ -887,7 +887,7 @@ $('#cap').addEventListener('close', stopStream);
 function doPrint() { $('#rview').hidden = false; $('#rview').scrollTop = 0; renderReport(); }
 $('#b-print').onclick = doPrint; $('#rClose').onclick = () => $('#rview').hidden = true; $('#rPrint').onclick = () => { try { window.print(); } catch (e) { toast('Printing is not available here. Open this page in a browser to print.'); } };
 /* ----- foot photo: tap points on a picture ----- */
-const PH = { img: null, side: 'L', pts: [], steps: [] };
+const PH = { img: null, side: 'L', pts: [], steps: [], guess: new Set(), auto: false, drag: -1 };
 const PH_STEPS = [['refA', 'A4 sheet: tap one end of a long or short edge you chose above'], ['refB', 'A4 sheet: tap the other end of the same edge'],
   ['heel', 'Heel: back of the heel where it meets the floor'], ['toe', 'Longest toe: the tip'], ['ball', 'Ball of the foot: inner side, under the big toe joint, at the floor'],
   ['nav', 'Navicular: the bony bump on the inner mid-foot, just in front of the ankle bone'], ['dors', 'Top of the foot: halfway between heel and toe tip, on the upper surface'],
@@ -901,10 +901,10 @@ function openPhoto(side) {
 }
 function phLoad(f) {
   if (!f) return; const url = URL.createObjectURL(f), im = new Image();
-  im.onload = () => { PH.img = im; PH.pts = []; $('#phWork').hidden = false; const cv = $('#phCv'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.style.maxHeight = '70vh'; cv.style.objectFit = 'contain'; phDraw(); };
+  im.onload = () => { PH.img = im; PH.pts = []; PH.guess = new Set(); PH.auto = false; phMsg(''); $('#phWork').hidden = false; const cv = $('#phCv'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.style.maxHeight = '70vh'; cv.style.objectFit = 'contain'; phDraw(); };
   im.onerror = () => phMsg('That picture could not be opened. Try a JPEG or PNG.'); im.src = url;
 }
-function paintPhoto(c, img, pts, steps, s) {
+function paintPhoto(c, img, pts, steps, s, hollow) {
   c.drawImage(img, 0, 0); const P = {}; pts.forEach((p, i) => P[steps[i][0]] = p);
   c.lineWidth = 2 * s; c.font = `${14 * s}px monospace`;
   if (P.refA && P.refB) { c.strokeStyle = '#f0c05a'; c.beginPath(); c.moveTo(...P.refA); c.lineTo(...P.refB); c.stroke(); }
@@ -912,10 +912,10 @@ function paintPhoto(c, img, pts, steps, s) {
   if (P.heel && P.ball) { c.strokeStyle = '#ffffff'; c.setLineDash([6 * s, 5 * s]); c.beginPath(); c.moveTo(...P.heel); c.lineTo(...P.ball); c.stroke(); c.setLineDash([]); }
   if (P.nav && P.heel && P.ball) { const d = P.ball[0] - P.heel[0], e = P.ball[1] - P.heel[1], L2 = d * d + e * e, t = ((P.nav[0] - P.heel[0]) * d + (P.nav[1] - P.heel[1]) * e) / L2, q = [P.heel[0] + t * d, P.heel[1] + t * e];
     c.strokeStyle = '#ff9d6e'; c.beginPath(); c.moveTo(...P.nav); c.lineTo(...q); c.stroke(); }
-  pts.forEach((p, i) => { c.fillStyle = '#7fe3c4'; c.beginPath(); c.arc(p[0], p[1], 6 * s, 0, 7); c.fill(); c.lineWidth = 3 * s; c.strokeStyle = '#000'; c.strokeText(steps[i][0], p[0] + 9 * s, p[1] - 8 * s); c.fillStyle = '#fff'; c.fillText(steps[i][0], p[0] + 9 * s, p[1] - 8 * s); });
+  pts.forEach((p, i) => { c.fillStyle = '#7fe3c4'; c.beginPath(); c.arc(p[0], p[1], 6 * s, 0, 7); if (hollow && hollow.has(i)) { c.lineWidth = 3 * s; c.strokeStyle = '#f0c05a'; c.stroke(); } else c.fill(); c.lineWidth = 3 * s; c.strokeStyle = '#000'; c.strokeText(steps[i][0], p[0] + 9 * s, p[1] - 8 * s); c.fillStyle = '#fff'; c.fillText(steps[i][0], p[0] + 9 * s, p[1] - 8 * s); });
 }
 function phDraw() {
-  const cv = $('#phCv'), c = cv.getContext('2d'), s = Math.max(cv.width, cv.height) / 900, st = phSteps(); paintPhoto(c, PH.img, PH.pts, st, s);
+  const cv = $('#phCv'), c = cv.getContext('2d'), s = Math.max(cv.width, cv.height) / 900, st = phSteps(); paintPhoto(c, PH.img, PH.pts, st, s, PH.guess);
   const n = PH.pts.length; $('#phStep').textContent = n < st.length ? `Point ${n + 1} of ${st.length}. ${st[n][1]}` : 'All points set. Check them, then save.';
   $('#phSave').disabled = n < st.length;
 }
@@ -924,17 +924,41 @@ function phResult() {
   const refPx = P.refA ? Math.hypot(P.refA[0] - P.refB[0], P.refA[1] - P.refB[1]) : null;
   return archFromPhoto(P, refPx, +$('#phRef').value || null);
 }
+
+/* auto-place: from the heel and toe tip, look along lines across the foot for the sole and the top edge, and put the other points where the picture suggests. A starting guess to be checked and dragged. */
+function suggestPoints(img, heel, toe) {
+  const W = img.naturalWidth, H = img.naturalHeight, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0);
+  const D = g.getImageData(0, 0, W, H).data, lum0 = (x, y) => { x = Math.max(0, Math.min(W - 1, Math.round(x))); y = Math.max(0, Math.min(H - 1, Math.round(y))); const i = (y * W + x) * 4; return .3 * D[i] + .59 * D[i + 1] + .11 * D[i + 2]; };
+  const L = Math.hypot(toe[0] - heel[0], toe[1] - heel[1]), u = [(toe[0] - heel[0]) / L, (toe[1] - heel[1]) / L]; let n = [u[1], -u[0]]; if (n[1] > 0) n = [-n[0], -n[1]];
+  const at = (t, s) => [heel[0] + u[0] * t * L + n[0] * s * L, heel[1] + u[1] * t * L + n[1] * s * L];
+  const lum = (t, s) => { const [x, y] = at(t, s); let a = 0; for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) a += lum0(x + i * 2, y + j * 2); return a / 25; };
+  const col = t => { const body = lum(t, .12); const T = body * 1.5 + 18; let s = .12; while (s < .5 && lum(t, s + .01) < T) s += .01; return s; };   // top edge: first bright pixel above the foot body
+  const sole = t => { const f = lum(t, -.004); let s = 0; while (s < .1 && lum(t, s + .004) > f * .62) s += .004; return s; };                          // first dark pixel above the bright floor/paper
+  const tb = .74, tn = .38, td = .5, floorAt = t => at(t, 0);
+  const topN = col(tn), topD = col(td);
+  return { ball: floorAt(tb), nav: at(tn, Math.max(.06, topN * .55)), dors: at(td, topD), sole: at(.42, Math.max(.004, sole(.42))) };
+}
+
 $('#phGal').onclick = () => $('#phFile').click(); $('#phCamB').onclick = () => $('#phCam').click(); $('#phX').onclick = () => $('#ph').close();
 $('#phFile').onchange = e => { phLoad(e.target.files[0]); e.target.value = ''; }; $('#phCam').onchange = e => { phLoad(e.target.files[0]); e.target.value = ''; };
 $('#phRef').onchange = () => { PH.pts = []; if (PH.img) phDraw(); };
-$('#phUndo').onclick = () => { PH.pts.pop(); phDraw(); }; $('#phRedo').onclick = () => { PH.pts = []; phDraw(); };
+$('#phUndo').onclick = () => { PH.pts.pop(); PH.guess = new Set([...PH.guess].filter(i => i < PH.pts.length)); phDraw(); }; $('#phRedo').onclick = () => { PH.pts = []; PH.guess = new Set(); PH.auto = false; phMsg(''); phDraw(); };
+const phPos = e => { const cv = $('#phCv'), r = cv.getBoundingClientRect(), k = Math.min(r.width / cv.width, r.height / cv.height), ox = (r.width - cv.width * k) / 2, oy = (r.height - cv.height * k) / 2;
+  return { x: (e.clientX - r.left - ox) / k, y: (e.clientY - r.top - oy) / k, k, w: cv.width, h: cv.height }; };
 $('#phCv').addEventListener('pointerdown', e => {
-  if (!PH.img || PH.pts.length >= phSteps().length) return; const cv = $('#phCv'), r = cv.getBoundingClientRect();
-  const k = Math.min(r.width / cv.width, r.height / cv.height), ox = (r.width - cv.width * k) / 2, oy = (r.height - cv.height * k) / 2;
-  const x = (e.clientX - r.left - ox) / k, y = (e.clientY - r.top - oy) / k; if (x < 0 || y < 0 || x > cv.width || y > cv.height) return;
-  PH.pts.push([x, y]); phDraw(); });
+  if (!PH.img) return; const q = phPos(e); if (q.x < 0 || q.y < 0 || q.x > q.w || q.y > q.h) return;
+  let best = -1, bd = 30 / q.k; PH.pts.forEach((p, i) => { const d = Math.hypot(p[0] - q.x, p[1] - q.y); if (d < bd) { bd = d; best = i; } });
+  if (best >= 0) { PH.drag = best; e.target.setPointerCapture(e.pointerId); return; }   // grab an existing point to move it
+  if (PH.pts.length >= phSteps().length) return; PH.pts.push([q.x, q.y]); phDraw(); });
+$('#phCv').addEventListener('pointermove', e => { if (PH.drag < 0) return; const q = phPos(e); PH.pts[PH.drag] = [Math.max(0, Math.min(q.w, q.x)), Math.max(0, Math.min(q.h, q.y))]; PH.guess.delete(PH.drag); phDraw(); });
+$('#phCv').addEventListener('pointerup', () => { PH.drag = -1; });
+$('#phAuto').onclick = () => {
+  const st = phSteps(), ih = st.findIndex(s => s[0] === 'heel'), it = st.findIndex(s => s[0] === 'toe');
+  if (PH.pts.length < it + 1) { phMsg('Tap the heel and the longest toe tip first, then press Auto-place.'); return; }
+  const sg = suggestPoints(PH.img, PH.pts[ih], PH.pts[it]); PH.pts = PH.pts.slice(0, it + 1).concat([sg.ball, sg.nav, sg.dors, sg.sole]); PH.guess = new Set([it + 1, it + 2, it + 3, it + 4]); PH.auto = true;
+  phMsg('Points placed from the picture. Drag any hollow point onto the right spot, then save.'); phDraw(); };
 $('#phSave').onclick = () => {
-  const res = phResult(), side = $('#phSide').value, warn = [];
+  const res = phResult(), side = $('#phSide').value, warn = []; res.auto = PH.auto;
   if (res.dorsAt < .4 || res.dorsAt > .6) warn.push('the top-of-foot point was not near halfway, so the arch height index is rougher');
   if (res.navAt < .2 || res.navAt > .6) warn.push('the navicular point looks out of place');
   const keep = PH.img; St.photos = St.photos.filter(p => p.side !== side); St.photos.push({ side, img: keep, res, pts: PH.pts.slice(), steps: phSteps() });

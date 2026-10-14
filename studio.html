@@ -986,13 +986,13 @@ function phKindUi() { const k = $('#phKind').value; PH.kind = k; $('#phSideL').h
 function openPhoto(kind, side, file) {
   $('#phKind').value = kind || 'arch'; phKindUi(); const last = St.photos.filter(p => (p.kind || 'arch') === 'arch').pop();
   PH.side = side || ({ L: 'R', R: 'L' }[(last || {}).side] || 'L'); $('#phSide').value = PH.side;
-  $('#phWork').hidden = true; phMsg(''); $('#ph').showModal(); if (file) phLoad(file); else $('#phFile').click();
+  $('#phWork').hidden = true; phMsg(''); PH.img = null; if (file) phLoad(file); else $('#phFile').click();   // the dialog opens only once the picture has finished loading
 }
 $('#phKind').onchange = () => { phKindUi(); PH.pts = []; PH.guess = new Set(); PH.auto = false; phMsg(''); if (PH.img) phDraw(); };
 function phLoad(f) {
   if (!f) return; const url = URL.createObjectURL(f), im = new Image();
-  im.onload = () => { PH.img = im; PH.pts = []; PH.guess = new Set(); PH.auto = false; phMsg(''); $('#phWork').hidden = false; const cv = $('#phCv'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.style.maxHeight = '70vh'; cv.style.objectFit = 'contain'; phDraw(); };
-  im.onerror = () => phMsg('That picture could not be opened. Try a JPEG or PNG.'); im.src = url;
+  im.onload = () => { if (!$('#ph').open) $('#ph').showModal(); PH.img = im; PH.pts = []; PH.guess = new Set(); PH.auto = false; phMsg(''); $('#phWork').hidden = false; const cv = $('#phCv'); cv.width = im.naturalWidth; cv.height = im.naturalHeight; cv.style.maxHeight = '70vh'; cv.style.objectFit = 'contain'; phDraw(); };
+  im.onerror = () => { if (!$('#ph').open) $('#ph').showModal(); phMsg('That picture could not be opened. Try a JPEG or PNG.'); }; if ($('#ph').open) phMsg('Loading the photo…'); im.src = url;
 }
 function paintPhoto(c, img, pts, steps, s, hollow, kind) {
   c.drawImage(img, 0, 0); const P = {}; pts.forEach((p, i) => P[steps[i][0]] = p);

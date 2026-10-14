@@ -177,6 +177,8 @@ dialog{max-height:94vh;overflow:auto}
 /* report: live session */
 .r-live{padding-top:18px;break-before:page}.r-h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin:16px 0 8px}
 .r-gal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.r-gal figure{margin:0;border:1px solid #cfd8d6;background:#0b1413;break-inside:avoid}.r-gal img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}.r-gal figcaption{padding:4px 7px;font-size:10px;color:#cfe;line-height:1.35;font-family:'JetBrains Mono',monospace}.r-gal b{font-weight:600}
+
+.phpanel{border:1px solid var(--ln2);background:var(--pan);margin-bottom:12px}.phpanel .dlg{padding:14px}.phpanel[hidden],.vwrap[hidden]{display:none}
 </style></head><body>
 <div id="app">
 <header>
@@ -213,6 +215,21 @@ dialog{max-height:94vh;overflow:auto}
 
   <section class="col" aria-label="Video and curves">
     <button class="rtbtn" id="b-rt"><i></i><b>Runtime analysis</b><span>Live camera with every reading and the skeleton on screen. Everything is recorded into the report.</span></button>
+    <div id="ph" class="phpanel" hidden><div class="dlg">
+  <h3>Foot photo: arch</h3>
+  <p class="dim" id="phHelp" style="margin:0 0 8px">Take or pick a photo of a standing person. For the arch, photograph the inner edge of one foot on an A4 sheet. Tap the points as asked, or press Auto-place. The photo stays on this device.</p>
+  <div class="row"><label class="dim">Photo of <select id="phKind"><option value="arch">Inner side of one foot (arch)</option><option value="back">Back of the legs and heels</option><option value="front">Front of the legs and feet</option></select></label>
+  <label class="dim" id="phSideL">Foot <select id="phSide"><option value="L">Left</option><option value="R">Right</option></select></label>
+  <label class="dim" id="phRefL">Scale <select id="phRef"><option value="297">A4 long edge (297 mm)</option><option value="210">A4 short edge (210 mm)</option><option value="">No scale</option></select></label></div>
+  <div class="row"><button class="btn p" id="phGal">Choose photo</button><button class="btn" id="phCamB">Take photo</button><button class="btn" id="phX">Close panel</button></div>
+  <input type="file" id="phFile" accept="image/*" hidden><input type="file" id="phCam" accept="image/*" capture="environment" hidden>
+  <div id="phWork" hidden>
+    <div class="note mono" id="phStep" style="margin:10px 0 6px;color:var(--mint)"></div>
+    <canvas id="phCv" style="width:100%;touch-action:none;background:#000;border:1px solid var(--ln2);cursor:crosshair"></canvas>
+    <div class="row" style="margin-top:8px"><button class="btn sm" id="phUndo">Undo point</button><button class="btn sm" id="phRedo">Start again</button><button class="btn sm" id="phAuto" title="Needs the heel and toe tip tapped first">Auto-place points</button><button class="btn p" id="phSave" disabled>Save measurement</button></div>
+  </div>
+  <div class="note mono" id="phMsg" style="margin-top:8px"></div>
+</div></div>
     <div class="vwrap">
       <div class="stage" id="stage">
         <video id="vid" muted playsinline preload="auto"></video>
@@ -252,21 +269,7 @@ dialog{max-height:94vh;overflow:auto}
   <div class="row" id="recRow" hidden><button class="btn p" id="recGo">Start recording</button><span class="mono dim" id="recT"></span></div>
   <div class="prog" id="prog" hidden><i></i></div><div class="note mono" id="capMsg" style="margin-top:8px"></div>
 </div></dialog>
-<dialog id="ph"><div class="dlg">
-  <h3>Foot photo: arch</h3>
-  <p class="dim" id="phHelp" style="margin:0 0 8px">Take or pick a photo of a standing person. For the arch, photograph the inner edge of one foot on an A4 sheet. Tap the points as asked, or press Auto-place. The photo stays on this device.</p>
-  <div class="row"><label class="dim">Photo of <select id="phKind"><option value="arch">Inner side of one foot (arch)</option><option value="back">Back of the legs and heels</option><option value="front">Front of the legs and feet</option></select></label>
-  <label class="dim" id="phSideL">Foot <select id="phSide"><option value="L">Left</option><option value="R">Right</option></select></label>
-  <label class="dim" id="phRefL">Scale <select id="phRef"><option value="297">A4 long edge (297 mm)</option><option value="210">A4 short edge (210 mm)</option><option value="">No scale</option></select></label></div>
-  <div class="row"><button class="btn p" id="phGal">Choose photo</button><button class="btn" id="phCamB">Take photo</button><button class="btn" id="phX">Close</button></div>
-  <input type="file" id="phFile" accept="image/*" hidden><input type="file" id="phCam" accept="image/*" capture="environment" hidden>
-  <div id="phWork" hidden>
-    <div class="note mono" id="phStep" style="margin:10px 0 6px;color:var(--mint)"></div>
-    <canvas id="phCv" style="width:100%;touch-action:none;background:#000;border:1px solid var(--ln2);cursor:crosshair"></canvas>
-    <div class="row" style="margin-top:8px"><button class="btn sm" id="phUndo">Undo point</button><button class="btn sm" id="phRedo">Start again</button><button class="btn sm" id="phAuto" title="Needs the heel and toe tip tapped first">Auto-place points</button><button class="btn p" id="phSave" disabled>Save measurement</button></div>
-  </div>
-  <div class="note mono" id="phMsg" style="margin-top:8px"></div>
-</div></dialog>
+
 <div id="rt" hidden>
   <div class="rt-main" id="rtMain">
     <div class="rt-vw" id="rtVw"><video id="rtv" muted playsinline></video><canvas id="rtc"></canvas></div>
@@ -983,6 +986,9 @@ const PH_BACK = [['Lcalf', 'Left leg (left of the picture): middle of the lower 
 const PH_FRONT = [['Rankle', 'Right leg (left of the picture): middle of the ankle, at the cuff'], ['Rtoe', 'Right foot: tip of the second toe'], ['Lankle', 'Left leg (right of the picture): middle of the ankle, at the cuff'], ['Ltoe', 'Left foot: tip of the second toe']];
 function phSteps() { return PH.kind === 'back' ? PH_BACK : PH.kind === 'front' ? PH_FRONT : $('#phRef').value ? PH_STEPS : PH_STEPS.slice(2); }
 function phKindUi() { const k = $('#phKind').value; PH.kind = k; $('#phSideL').hidden = $('#phRefL').hidden = k !== 'arch'; $('#phAuto').title = k === 'arch' ? 'Needs the heel and toe tip tapped first' : 'Finds the feet and legs in the picture'; }
+/* the photo tool is a panel in the middle column (it replaces the video while open), not a pop-up */
+(() => { const el = $('#ph'), vw = document.querySelector('.vwrap'); Object.defineProperty(el, 'open', { get: () => !el.hidden });
+  el.showModal = () => { el.hidden = false; vw.hidden = true; el.scrollIntoView({ block: 'start', behavior: 'smooth' }); }; el.close = () => { el.hidden = true; vw.hidden = false; }; })();
 function openPhoto(kind, side, file) {
   $('#phKind').value = kind || 'arch'; phKindUi(); const last = St.photos.filter(p => (p.kind || 'arch') === 'arch').pop();
   PH.side = side || ({ L: 'R', R: 'L' }[(last || {}).side] || 'L'); $('#phSide').value = PH.side;
